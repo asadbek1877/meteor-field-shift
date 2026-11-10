@@ -1,0 +1,11 @@
+{
+  "_note": "Reference rotations for irrigated farming in Uzbekistan. Each inner list is one year of the cycle; two crops in a year means a second crop after the first harvest. DRAFT: Mizuki must confirm these with a local agronomy source.",
+  "default_current": "cotton_wheat",
+  "rotations": [
+    {"id": "cotton_mono", "name": {"en": "Cotton every year", "uz": "Har yili paxta"}, "years": [["cotton"]]},
+    {"id": "cotton_wheat", "name": {"en": "Cotton - wheat", "uz": "Paxta - bug'doy"}, "years": [["cotton"], ["winter_wheat"]]},
+    {"id": "cotton_wheat_mung", "name": {"en": "Cotton - wheat + mung bean", "uz": "Paxta - bug'doy + mosh"}, "years": [["cotton"], ["winter_wheat", "mung_bean"]]},
+    {"id": "cotton_wheat_alfalfa", "name": {"en": "Cotton - wheat - alfalfa (2 years)", "uz": "Paxta - bug'doy - beda (2 yil)"}, "years": [["cotton"], ["winter_wheat"], ["alfalfa"], ["alfalfa"]]},
+    {"id": "wheat_chickpea_sorghum", "name": {"en": "Wheat - chickpea - sorghum", "uz": "Bug'doy - no'xat - oq jo'xori"}, "years": [["winter_wheat"], ["chickpea"], ["sorghum"]]}
+  ]
+}
