@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
+import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -85,6 +86,28 @@ def layers():
     """Map layers of the enabled layer providers (no network check, for a fast first paint)."""
     return [{**layer, "provider": p["id"]} for p in providers.all_providers()
             if p["enabled"] and p["kind"] == "layers" for layer in providers.layers_of(p)]
+
+
+@app.get("/api/places")
+def search_places(
+    q: str = Query(min_length=3, max_length=200),
+    lang: str = Query(default="en", pattern="^(en|uz)$"),
+):
+    """Search place names through Photon without requiring browser access to a third party."""
+    try:
+        response = httpx.get(
+            "https://photon.komoot.io/api/",
+            params={"q": q, "limit": 6, "lang": "en" if lang == "en" else "default"},
+            timeout=8,
+            headers={"User-Agent": "TerraShift/1.0"},
+        )
+        response.raise_for_status()
+        result = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(502, "Place search is temporarily unavailable.") from exc
+    if not isinstance(result, dict) or not isinstance(result.get("features"), list):
+        raise HTTPException(502, "Place search returned an invalid response.")
+    return result
 
 
 # ---------- providers (site settings page) ----------

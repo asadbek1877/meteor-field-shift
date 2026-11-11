@@ -59,7 +59,7 @@ with `ADMIN_TOKEN` set: a map tile layer, or a JSON API that is returned as raw
 | `backend/agro.py` | crop simulation, rotation replay, soil health index, ranking |
 | `backend/texts.py` | warnings and advice in English and Uzbek |
 | `backend/crops.json`, `backend/rotations.json` | crop and rotation parameters (edit these, not the code) |
-| `frontend/` | one page: `index.html`, `style.css`, `app.js`, `i18n.js`, Leaflet and Chart.js in `vendor/` |
+| `frontend/` | static pages: field setup (`index.html`), rotations, climate, crops, current conditions and sources; shared `style.css`, `app.js`, `i18n.js`, Leaflet and Chart.js in `vendor/` |
 | `tests/test_backend.py` | 16 tests, including two FAO-56 worked examples |
 
 ## Method

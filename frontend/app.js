@@ -2,6 +2,7 @@
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const on = (id, event, handler) => { const el = $(id); if (el) el.addEventListener(event, handler); };
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // ---------- state ----------
@@ -9,11 +10,12 @@
   const state = Object.assign({
     lat: 40.1158, lon: 67.8422, lang: "uz", soil: "auto", irrigation: "furrow", current: null,
     customYears: [["cotton", ""], ["winter_wheat", ""]],
-    weights: { water: 40, income: 20, soil: 20, risk: 20 }, layer: "", opacity: 70, metric: "t_mean",
+    weights: { water: 40, income: 20, soil: 20, risk: 20 }, layer: "", opacity: 70, metric: "t_mean", locationLabel: "",
   }, saved);
   const save = () => { try { localStorage.setItem("terrashift", JSON.stringify(state)); } catch { /* private mode */ } };
 
   let options = null, data = null, map = null, marker = null, overlay = null, layers = [];
+  let placeTimer = null, placeController = null, placeResults = [], activePlaceIndex = -1;
   const charts = {};
 
   // ---------- texts and numbers ----------
@@ -44,7 +46,15 @@
   function applyStaticTexts() {
     document.documentElement.lang = state.lang;
     document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+    document.querySelectorAll("[data-t-placeholder]").forEach((el) => { el.setAttribute("placeholder", t(el.dataset.tPlaceholder)); });
+    document.querySelectorAll("[data-t-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.tAria)));
     document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang)));
+    if ($("place-info")) $("place-info").textContent = state.locationLabel ? t("place_selected", { place: state.locationLabel }) : "";
+    document.querySelectorAll("[data-page-link]").forEach((link) => {
+      if (link.dataset.pageLink === document.body.dataset.page) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    document.title = t(document.body.dataset.title || "page_title_home");
   }
 
   // ---------- API ----------
@@ -61,7 +71,8 @@
   async function analyze() {
     save();
     if (controller) controller.abort();
-    controller = new AbortController();
+    const requestController = new AbortController();
+    controller = requestController;
     const q = new URLSearchParams({
       lat: state.lat, lon: state.lon, lang: state.lang, soil: state.soil, irrigation: state.irrigation,
       w_water: state.weights.water, w_income: state.weights.income, w_soil: state.weights.soil, w_risk: state.weights.risk,
@@ -69,38 +80,59 @@
     if (state.current === "custom") {
       q.set("custom", state.customYears.map((y) => y.filter(Boolean).join("+")).filter(Boolean).join("|"));
     } else if (state.current) q.set("current", state.current);
-    $("content").classList.add("loading");
-    if (!data) { $("verdict").textContent = t("loading"); }
+    if ($("content")) {
+      $("content").classList.add("loading");
+      $("content").setAttribute("aria-busy", "true");
+    }
+    if ($("analysis-status")) $("analysis-status").textContent = t("analyzing");
+    if (!data && $("verdict")) $("verdict").textContent = t("loading");
     try {
-      data = await api(`/api/analyze?${q}`, { signal: controller.signal });
+      data = await api(`/api/analyze?${q}`, { signal: requestController.signal });
       render();
+      if ($("analysis-status")) $("analysis-status").textContent = t("analysis_updated");
     } catch (err) {
       if (err.name === "AbortError") return;
-      $("warnings").innerHTML = alertHtml("critical", t("error", { msg: err.message }));
+      if ($("warnings")) $("warnings").innerHTML = alertHtml("critical", t("error", { msg: err.message }));
+      if ($("analysis-status")) $("analysis-status").textContent = t("analysis_failed");
     } finally {
-      $("content").classList.remove("loading");
+      if (controller === requestController) {
+        if ($("content")) {
+          $("content").classList.remove("loading");
+          $("content").setAttribute("aria-busy", "false");
+        }
+      }
     }
   }
 
   // ---------- map ----------
   function initMap() {
+    if (!$("map")) return;
     map = L.map("map", { zoomControl: true, attributionControl: true }).setView([state.lat, state.lon], 7);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
     marker = L.marker([state.lat, state.lon], { icon: L.divIcon({ className: "", html: '<div class="pin"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map);
-    map.on("click", (e) => setPoint(e.latlng.lat, e.latlng.lng, false));
+    map.on("click", (e) => setPoint(e.latlng.lat, e.latlng.lng, false, ""));
   }
 
-  function setPoint(lat, lon, recenter = true) {
+  function setPoint(lat, lon, recenter = true, locationLabel = "") {
+    if (!map || !marker) return;
     state.lat = Math.round(lat * 1e4) / 1e4;
     state.lon = Math.round(((lon + 540) % 360 - 180) * 1e4) / 1e4;
+    state.locationLabel = locationLabel;
     marker.setLatLng([state.lat, state.lon]);
     if (recenter) map.setView([state.lat, state.lon], Math.max(map.getZoom(), 8));
     $("coords").textContent = `${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
-    document.querySelectorAll("#presets .btn").forEach((b) => b.classList.toggle("active", +b.dataset.lat === state.lat && +b.dataset.lon === state.lon));
+    if ($("place-search")) $("place-search").value = locationLabel;
+    if ($("place-info")) $("place-info").textContent = locationLabel ? t("place_selected", { place: locationLabel }) : "";
+    document.querySelectorAll("#presets .btn").forEach((b) => {
+      const selected = +b.dataset.lat === state.lat && +b.dataset.lon === state.lon;
+      b.classList.toggle("active", selected);
+      b.setAttribute("aria-pressed", String(selected));
+    });
     analyze();
   }
 
   function renderLayerSelect() {
+    if (!$("layer")) return;
     const sel = $("layer");
     sel.innerHTML = `<option value="">${esc(t("layer_none"))}</option>` +
       layers.map((l) => `<option value="${esc(l.id)}">${esc(title(l))}</option>`).join("");
@@ -110,6 +142,7 @@
   }
 
   function showOverlay() {
+    if (!map) return;
     if (overlay) { map.removeLayer(overlay); overlay = null; }
     const layer = layers.find((l) => l.id === state.layer);
     $("opacity-row").hidden = !layer;
@@ -119,44 +152,156 @@
 
   function locate() {
     const msg = $("locate-msg");
-    const fail = (key) => { msg.textContent = t(key); msg.hidden = false; };
+    const button = $("locate");
+    const setPending = (pending) => {
+      button.disabled = pending;
+      button.setAttribute("aria-busy", String(pending));
+      button.textContent = t(pending ? "locating" : "locate");
+    };
+    const fail = (key) => { setPending(false); msg.textContent = t(key); msg.hidden = false; };
     msg.hidden = true;
     if (!window.isSecureContext || !navigator.geolocation) return fail("locate_insecure");
-    $("locate").textContent = t("locating");
+    setPending(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { $("locate").textContent = t("locate"); setPoint(pos.coords.latitude, pos.coords.longitude); },
-      (err) => { $("locate").textContent = t("locate"); fail(err.code === 1 ? "locate_denied" : "locate_unavailable"); },
+      (pos) => { setPending(false); setPoint(pos.coords.latitude, pos.coords.longitude); },
+      (err) => { fail(err.code === 1 ? "locate_denied" : "locate_unavailable"); },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+  }
+
+  function placeName(properties) {
+    return properties.name || properties.locality || properties.street || properties.district || properties.city || properties.county || properties.state || properties.country || "";
+  }
+
+  function placeContext(properties, primary) {
+    return [...new Set([properties.locality, properties.district, properties.city, properties.county, properties.state, properties.country])]
+      .filter((part) => part && part !== primary)
+      .join(", ");
+  }
+
+  function hidePlaceResults() {
+    const list = $("place-results"), input = $("place-search");
+    if (!list || !input) return;
+    list.hidden = true;
+    list.replaceChildren();
+    placeResults = [];
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+    activePlaceIndex = -1;
+  }
+
+  function renderPlaceResults(features) {
+    const list = $("place-results");
+    if (!list) return;
+    placeResults = features.map((feature) => {
+      const properties = feature.properties || {};
+      const primary = placeName(properties);
+      const context = placeContext(properties, primary);
+      const coordinates = feature.geometry && feature.geometry.coordinates;
+      return {
+        primary,
+        context,
+        label: [primary, context].filter(Boolean).join(", "),
+        lon: Number(coordinates && coordinates[0]),
+        lat: Number(coordinates && coordinates[1]),
+      };
+    }).filter((place) => place.primary && Number.isFinite(place.lat) && Number.isFinite(place.lon)
+      && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180);
+    activePlaceIndex = -1;
+    if (!placeResults.length) {
+      hidePlaceResults();
+      $("place-search-status").textContent = t("place_search_empty");
+      return;
+    }
+    list.innerHTML = placeResults.map((place, index) => `
+      <li role="presentation"><button type="button" class="place-option" role="option" id="place-result-${index}" aria-selected="false" tabindex="-1" data-place-index="${index}">
+        <span>${esc(place.primary)}</span>${place.context ? `<small>${esc(place.context)}</small>` : ""}
+      </button></li>`).join("");
+    list.hidden = false;
+    $("place-search").setAttribute("aria-expanded", "true");
+    $("place-search-status").textContent = t("place_search_count", { n: placeResults.length });
+  }
+
+  async function searchPlaces(query) {
+    if (placeController) placeController.abort();
+    const requestController = new AbortController();
+    placeController = requestController;
+    $("place-search-status").textContent = t("place_searching");
+    $("place-search").setAttribute("aria-busy", "true");
+    try {
+      const params = new URLSearchParams({ q: query, limit: 6, lang: state.lang });
+      const response = await fetch(`/api/places?${params}`, { signal: requestController.signal });
+      if (!response.ok) throw new Error(`Place search failed (${response.status})`);
+      const result = await response.json();
+      if (placeController !== requestController) return;
+      renderPlaceResults(Array.isArray(result.features) ? result.features : []);
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      if (placeController === requestController) {
+        hidePlaceResults();
+        $("place-search-status").textContent = t("place_search_error");
+      }
+    } finally {
+      if (placeController === requestController) $("place-search").setAttribute("aria-busy", "false");
+    }
+  }
+
+  function choosePlace(index) {
+    const place = placeResults[index];
+    if (!place) return;
+    $("place-search").value = place.label;
+    $("place-search-status").textContent = "";
+    hidePlaceResults();
+    setPoint(place.lat, place.lon, true, place.label);
+  }
+
+  function updateActivePlace(index) {
+    if (!placeResults.length) return;
+    activePlaceIndex = (index + placeResults.length) % placeResults.length;
+    const input = $("place-search");
+    input.setAttribute("aria-activedescendant", `place-result-${activePlaceIndex}`);
+    document.querySelectorAll("#place-results [role='option']").forEach((option, i) => {
+      option.setAttribute("aria-selected", String(i === activePlaceIndex));
+    });
   }
 
   // ---------- forms ----------
   function renderForms() {
-    $("presets").innerHTML = options.presets.map((p) =>
-      `<button type="button" class="btn ghost" data-lat="${p.lat}" data-lon="${p.lon}">${esc(name(p))}</button>`).join("");
-    $("current").innerHTML = options.rotations.map((r) => `<option value="${esc(r.id)}">${esc(name(r))}</option>`).join("") +
-      `<option value="custom">${esc(t("custom_rotation"))}</option>`;
-    $("current").value = state.current || options.default_current;
-    $("irrigation").innerHTML = options.irrigation.map((m) =>
-      `<option value="${esc(m.id)}">${esc(name(m))} · ${esc(t("efficiency", { pct: Math.round(m.efficiency * 100) }))}</option>`).join("");
-    $("irrigation").value = state.irrigation;
-    $("soil").innerHTML = `<option value="auto">${esc(t("soil_auto"))}</option>` +
-      options.soils.map((s) => `<option value="${esc(s.id)}">${esc(name(s))}</option>`).join("");
-    $("soil").value = state.soil;
-    $("sliders").innerHTML = ["water", "income", "soil", "risk"].map((k) => `
-      <div class="slider">
-        <label for="w-${k}">${esc(t("w_" + k))}</label><output id="o-${k}"></output>
-        <input type="range" id="w-${k}" min="0" max="100" step="5" value="${state.weights[k]}" data-w="${k}">
-      </div>`).join("");
-    renderWeights();
+    if ($("presets")) $("presets").innerHTML = options.presets.map((p) =>
+      `<button type="button" class="btn ghost" data-lat="${p.lat}" data-lon="${p.lon}" aria-pressed="${p.lat === state.lat && p.lon === state.lon}">${esc(name(p))}</button>`).join("");
+    if ($("current")) {
+      $("current").innerHTML = options.rotations.map((r) => `<option value="${esc(r.id)}">${esc(name(r))}</option>`).join("") +
+        `<option value="custom">${esc(t("custom_rotation"))}</option>`;
+      $("current").value = state.current || options.default_current;
+    }
+    if ($("irrigation")) {
+      $("irrigation").innerHTML = options.irrigation.map((m) =>
+        `<option value="${esc(m.id)}">${esc(name(m))} · ${esc(t("efficiency", { pct: Math.round(m.efficiency * 100) }))}</option>`).join("");
+      $("irrigation").value = state.irrigation;
+    }
+    if ($("soil")) {
+      $("soil").innerHTML = `<option value="auto">${esc(t("soil_auto"))}</option>` +
+        options.soils.map((s) => `<option value="${esc(s.id)}">${esc(name(s))}</option>`).join("");
+      $("soil").value = state.soil;
+    }
+    if ($("sliders")) {
+      $("sliders").innerHTML = ["water", "income", "soil", "risk"].map((k) => `
+        <div class="slider">
+          <label for="w-${k}">${esc(t("w_" + k))}</label><output id="o-${k}"></output>
+          <input type="range" id="w-${k}" min="0" max="100" step="5" value="${state.weights[k]}" data-w="${k}">
+        </div>`).join("");
+      renderWeights();
+    }
     renderBuilder();
   }
 
   function renderWeights() {
+    if (!$("sliders")) return;
     const sum = Object.values(state.weights).reduce((a, b) => a + b, 0) || 1;
     for (const k in state.weights) $("o-" + k).textContent = Math.round(100 * state.weights[k] / sum) + "%";
   }
 
   function renderBuilder() {
+    if (!$("builder-years")) return;
     $("builder").hidden = $("current").value !== "custom";
     const opts = (sel, empty) => (empty ? `<option value="">${esc(t("second_crop"))}</option>` : "") +
       options.crops.map((c) => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(name(c))}</option>`).join("");
@@ -173,32 +318,37 @@
     .map((a) => `<li class="${esc(a.severity)}"><span class="ico" aria-hidden="true">${ICON[a.severity] || "i"}</span><span>${esc(a.text)}</span></li>`).join("");
 
   function render() {
-    $("coords").textContent = `${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
-    $("warnings").innerHTML = data.warnings.map((w) => alertHtml(w.severity, w.text)).join("");
+    if ($("coords")) $("coords").textContent = `${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
+    if ($("warnings")) $("warnings").innerHTML = data.warnings.map((w) => alertHtml(w.severity, w.text)).join("");
     renderChips();
-    if (JSON.stringify(data.map_layers.map((l) => l.id)) !== JSON.stringify(layers.map((l) => l.id))) {
+    if ($("layer") && JSON.stringify(data.map_layers.map((l) => l.id)) !== JSON.stringify(layers.map((l) => l.id))) {
       layers = data.map_layers; renderLayerSelect();
     }
     renderSoilNote();
     const ok = !!data.rotations;
-    for (const id of ["rotations-card", "climate-card", "crops-card", "now-card"]) $(id).hidden = !ok;
     if (!ok) {
-      $("verdict").textContent = t("no_data_title");
-      $("verdict-sub").textContent = t("no_data_sub");
-      $("advice-top").innerHTML = "";
-    } else {
-      renderVerdict(); renderRotations(); renderClimate(); renderCrops(); renderNow();
+      if ($("verdict")) $("verdict").textContent = t("no_data_title");
+      if ($("verdict-sub")) $("verdict-sub").textContent = t("no_data_sub");
+      if ($("advice-top")) $("advice-top").innerHTML = "";
+    } else if ($("verdict") || $("verdict-sub") || $("advice-top")) renderVerdict();
+    if (ok) {
+      if ($("rotations")) renderRotations();
+      if ($("climate-card")) renderClimate();
+      if ($("crops")) renderCrops();
+      if ($("now-card")) renderNow();
     }
-    renderSources();
+    if ($("datasets")) renderSources();
   }
 
   function renderChips() {
+    if (!$("chips")) return;
     const cls = { ok: "ok", live: "ok", cache: "ok", monthly: "warn", fallback: "warn", disabled: "warn", failed: "bad", down: "bad" };
     $("chips").innerHTML = data.providers.map((p) =>
       `<span class="chip" title="${esc(p.message || "")}"><span class="dot ${cls[p.status] || ""}"></span>${esc(p.name)} · ${esc(t("st_" + p.status))}</span>`).join("");
   }
 
   function renderSoilNote() {
+    if (!$("soil-note")) return;
     const d = data.soil.details, kind = data.coverage.soil;
     $("soil-note").textContent = kind === "measured" && d
       ? t("soil_measured", { clay: fmt(d.clay_pct), sand: fmt(d.sand_pct), soc: d.organic_carbon_g_kg ?? "–", ph: d.ph ?? "–" }) + " → " + name(data.soil)
@@ -213,11 +363,11 @@
   function renderVerdict() {
     const r = data.rotations;
     const best = r.items.find((it) => it.id === r.best_id);
-    $("verdict").textContent = t(best.is_current ? "verdict_keep" : "verdict_best", { name: name(best) });
-    $("verdict-sub").textContent = t("verdict_sub", {
+    if ($("verdict")) $("verdict").textContent = t(best.is_current ? "verdict_keep" : "verdict_best", { name: name(best) });
+    if ($("verdict-sub")) $("verdict-sub").textContent = t("verdict_sub", {
       n: r.items.length, y0: r.period[0], y1: r.period[1], soil: name(data.soil), method: methodName(),
     });
-    $("advice-top").innerHTML = adviceHtml("rotation");
+    if ($("advice-top")) $("advice-top").innerHTML = adviceHtml("rotation");
   }
 
   // One horizontal bar on a shared scale: shaded p10-p90 range plus a mark at the median.
@@ -430,59 +580,145 @@
       await api(path, { method, headers: { "Content-Type": "application/json", "X-Admin-Token": $("admin-token").value }, body: body ? JSON.stringify(body) : undefined });
       msg.textContent = t("saved");
       await loadProviders();
-      layers = await api("/api/layers"); renderLayerSelect();
+      if ($("map")) { layers = await api("/api/layers"); renderLayerSelect(); }
       analyze();
-    } catch (err) { msg.textContent = t("error", { msg: err.message }); }
+    } catch (err) {
+      if (msg) msg.textContent = t("error", { msg: err.message });
+      else if ($("providers")) $("providers").textContent = t("error", { msg: err.message });
+    }
   }
 
   // ---------- events ----------
   function bind() {
     document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
-      state.lang = b.dataset.lang; applyStaticTexts(); renderForms(); renderLayerSelect(); analyze();
+      state.lang = b.dataset.lang;
+      applyStaticTexts();
+      if (options) renderForms();
+      renderLayerSelect();
+      if (data) render();
+      analyze();
+      if ($("providers")) loadProviders().catch(showProviderError);
+      if ($("place-search") && $("place-search").value.trim().length >= 3) {
+        clearTimeout(placeTimer);
+        if (placeController) placeController.abort();
+        placeTimer = setTimeout(() => searchPlaces($("place-search").value.trim()), 600);
+      }
     }));
-    $("locate").addEventListener("click", locate);
-    $("presets").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setPoint(+b.dataset.lat, +b.dataset.lon); });
-    $("layer").addEventListener("change", (e) => { state.layer = e.target.value; save(); showOverlay(); });
-    $("opacity").addEventListener("input", (e) => { state.opacity = +e.target.value; if (overlay) overlay.setOpacity(state.opacity / 100); save(); });
-    $("current").addEventListener("change", (e) => { state.current = e.target.value; renderBuilder(); analyze(); });
-    $("irrigation").addEventListener("change", (e) => { state.irrigation = e.target.value; analyze(); });
-    $("soil").addEventListener("change", (e) => { state.soil = e.target.value; analyze(); });
-    $("sliders").addEventListener("input", (e) => { const k = e.target.dataset.w; if (!k) return; state.weights[k] = +e.target.value; renderWeights(); analyzeSoon(); });
-    $("builder-years").addEventListener("change", (e) => { const s = e.target; state.customYears[+s.dataset.y][+s.dataset.s] = s.value; analyze(); });
-    $("add-year").addEventListener("click", () => { if (state.customYears.length < 6) { state.customYears.push(["winter_wheat", ""]); renderBuilder(); analyze(); } });
-    $("remove-year").addEventListener("click", () => { if (state.customYears.length > 1) { state.customYears.pop(); renderBuilder(); analyze(); } });
-    $("metric").addEventListener("change", (e) => { state.metric = e.target.value; save(); renderAnnual(); });
-    $("open-settings").addEventListener("click", () => { $("settings").showModal(); loadProviders().catch((err) => { $("providers").textContent = err.message; }); });
-    $("refresh-providers").addEventListener("click", () => loadProviders(true));
-    $("providers").addEventListener("click", (e) => {
+    const workspace = $("map-workspace");
+    const fullscreenHost = $("fullscreen-map-host");
+    const workspaceHome = workspace && workspace.parentElement;
+    const workspaceNext = workspace && workspace.nextElementSibling;
+    on("open-map", "click", () => {
+      const dialog = $("map-dialog");
+      if (!map || !workspace || !fullscreenHost || !dialog || dialog.open) return;
+      dialog.showModal();
+      fullscreenHost.append(workspace);
+      requestAnimationFrame(() => {
+        map.invalidateSize({ pan: false });
+        $("close-map").focus();
+      });
+    });
+    on("close-map", "click", () => $("map-dialog").close());
+    on("map-dialog", "keydown", (e) => {
+      if (e.key === "Escape" && !e.defaultPrevented) {
+        e.preventDefault();
+        $("map-dialog").close();
+      }
+    });
+    on("map-dialog", "close", () => {
+      if (workspace && fullscreenHost && workspace.parentElement === fullscreenHost && workspaceHome) {
+        workspaceHome.insertBefore(workspace, workspaceNext && workspaceNext.parentElement === workspaceHome ? workspaceNext : null);
+      }
+      if (map) requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+      $("open-map").focus();
+    });
+    on("locate", "click", locate);
+    on("place-search", "input", (e) => {
+      const query = e.target.value.trim();
+      clearTimeout(placeTimer);
+      if (placeController) placeController.abort();
+      hidePlaceResults();
+      $("place-search").setAttribute("aria-busy", "false");
+      if (query.length < 3) {
+        $("place-search-status").textContent = query ? t("place_search_min") : "";
+        return;
+      }
+      placeTimer = setTimeout(() => searchPlaces(query), 600);
+    });
+    on("place-search", "keydown", (e) => {
+      if (e.key === "ArrowDown" && placeResults.length) {
+        e.preventDefault();
+        updateActivePlace(activePlaceIndex + 1);
+      } else if (e.key === "ArrowUp" && placeResults.length) {
+        e.preventDefault();
+        updateActivePlace(activePlaceIndex < 0 ? placeResults.length - 1 : activePlaceIndex - 1);
+      } else if (e.key === "Enter" && activePlaceIndex >= 0) {
+        e.preventDefault();
+        choosePlace(activePlaceIndex);
+      } else if (e.key === "Escape" && !$("place-results").hidden) {
+        e.preventDefault();
+        e.stopPropagation();
+        hidePlaceResults();
+      }
+    });
+    on("place-results", "click", (e) => {
+      const button = e.target.closest("[data-place-index]");
+      if (button) choosePlace(Number(button.dataset.placeIndex));
+    });
+    on("presets", "click", (e) => { const b = e.target.closest("button"); if (b) setPoint(+b.dataset.lat, +b.dataset.lon); });
+    on("layer", "change", (e) => { state.layer = e.target.value; save(); showOverlay(); });
+    on("opacity", "input", (e) => { state.opacity = +e.target.value; if (overlay) overlay.setOpacity(state.opacity / 100); save(); });
+    on("current", "change", (e) => { state.current = e.target.value; renderBuilder(); analyze(); });
+    on("irrigation", "change", (e) => { state.irrigation = e.target.value; analyze(); });
+    on("soil", "change", (e) => { state.soil = e.target.value; analyze(); });
+    on("sliders", "input", (e) => { const k = e.target.dataset.w; if (!k) return; state.weights[k] = +e.target.value; renderWeights(); analyzeSoon(); });
+    on("builder-years", "change", (e) => { const s = e.target; state.customYears[+s.dataset.y][+s.dataset.s] = s.value; analyze(); });
+    on("add-year", "click", () => { if (state.customYears.length < 6) { state.customYears.push(["winter_wheat", ""]); renderBuilder(); analyze(); } });
+    on("remove-year", "click", () => { if (state.customYears.length > 1) { state.customYears.pop(); renderBuilder(); analyze(); } });
+    on("metric", "change", (e) => { state.metric = e.target.value; save(); renderAnnual(); });
+    on("refresh-providers", "click", () => loadProviders(true).catch(showProviderError));
+    on("providers", "click", (e) => {
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.toggle) editProvider(`/api/providers/${b.dataset.toggle}`, "PATCH", { enabled: b.dataset.on !== "true" });
       if (b.dataset.remove) editProvider(`/api/providers/${b.dataset.remove}`, "DELETE");
     });
-    $("provider-form").addEventListener("submit", (e) => {
+    on("provider-form", "submit", (e) => {
       e.preventDefault();
       editProvider("/api/providers", "POST", { id: $("p-id").value, name: $("p-name").value, kind: $("p-kind").value, url_template: $("p-url").value });
     });
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (data) render(); });
   }
 
+  function showProviderError(err) {
+    const message = t("error", { msg: err.message });
+    if ($("provider-msg")) $("provider-msg").textContent = message;
+    else if ($("providers")) $("providers").textContent = message;
+  }
+
   // ---------- start ----------
   async function start() {
-    Chart.defaults.font.family = css("--font");
-    Chart.defaults.font.size = 12;
+    if (window.Chart) {
+      Chart.defaults.font.family = css("--font");
+      Chart.defaults.font.size = 12;
+    }
     applyStaticTexts();
-    $("opacity").value = state.opacity;
+    if ($("opacity")) $("opacity").value = state.opacity;
     initMap();
     bind();
     try {
-      [options, layers] = await Promise.all([api("/api/options"), api("/api/layers")]);
+      [options, layers] = await Promise.all([
+        api("/api/options"),
+        $("map") ? api("/api/layers") : Promise.resolve([]),
+      ]);
     } catch (err) {
-      $("warnings").innerHTML = alertHtml("critical", t("error", { msg: err.message }));
+      if ($("warnings")) $("warnings").innerHTML = alertHtml("critical", t("error", { msg: err.message }));
       return;
     }
     renderForms();
     renderLayerSelect();
-    setPoint(state.lat, state.lon);
+    if ($("map")) setPoint(state.lat, state.lon, true, state.locationLabel);
+    else analyze();
+    if ($("providers")) loadProviders().catch(showProviderError);
   }
   start();
 })();

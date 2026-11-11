@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TerraShift</title><meta name="description" content="Data sources, methods, and provider settings for TerraShift.">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="sources" data-title="page_title_sources">
+  <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
+  <header class="top">
+    <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span></a>
+    <nav class="site-nav" data-t-aria="main_nav_label">
+      <a href="/" data-page-link="home" data-t="nav_home"></a><a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
+      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a><a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
+      <a href="/current.html" data-page-link="current" data-t="nav_now"></a><a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
+    </nav>
+    <div class="top-actions"><div id="chips" class="chips" aria-live="polite"></div>
+      <div class="seg" role="group" data-t-aria="language_group"><button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button></div>
+      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
+    </div>
+  </header>
+  <div id="warnings" class="warnings" aria-live="polite"></div>
+  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+  <main class="page-main" id="main-content">
+    <section class="card" id="sources-card" aria-labelledby="sources-heading">
+      <h1 id="sources-heading" data-t="sources_title"></h1>
+      <div id="datasets"></div><h2 data-t="method_title"></h2>
+      <ul id="methods" class="plain"></ul><p id="disclaimer" class="hint"></p>
+    </section>
+    <section class="card" id="provider-settings" aria-labelledby="provider-heading">
+      <h2 id="provider-heading" data-t="settings_title"></h2><p class="hint" data-t="settings_hint"></p>
+      <div id="providers" aria-live="polite"></div>
+      <button type="button" id="refresh-providers" class="btn ghost" data-t="recheck"></button>
+      <h3 data-t="add_provider"></h3><p class="hint" id="edit-note"></p>
+      <form id="provider-form" class="form-grid">
+        <label class="field"><span data-t="admin_token"></span><input type="password" id="admin-token" autocomplete="off"></label>
+        <label class="field"><span data-t="p_id"></span><input id="p-id" required pattern="[a-z0-9_]{3,32}" placeholder="smap_layer"></label>
+        <label class="field"><span data-t="p_name"></span><input id="p-name" required placeholder="SMAP soil moisture"></label>
+        <label class="field"><span data-t="p_kind"></span><select id="p-kind"><option value="layers" data-t="kind_layers"></option><option value="json" data-t="kind_json"></option></select></label>
+        <label class="field wide"><span data-t="p_url"></span><input id="p-url" required placeholder="https://.../{z}/{y}/{x}.png"></label>
+        <button class="btn primary" data-t="add"></button>
+      </form>
+      <p id="provider-msg" class="hint" aria-live="polite"></p>
+    </section>
+  </main>
+  <script src="/i18n.js"></script><script src="/app.js"></script>
+</body>
+</html>
