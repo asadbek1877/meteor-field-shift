@@ -116,7 +116,7 @@
   function setPoint(lat, lon, recenter = true, locationLabel = "") {
     if (!map || !marker) return;
     state.lat = Math.round(lat * 1e4) / 1e4;
-    state.lon = Math.round(((lon + 540) % 360 - 180) * 1e4) / 1e4;
+    state.lon = Math.round((((lon + 180) % 360 + 360) % 360 - 180) * 1e4) / 1e4;  // wrap any world copy to -180..180
     state.locationLabel = locationLabel;
     marker.setLatLng([state.lat, state.lon]);
     if (recenter) map.setView([state.lat, state.lon], Math.max(map.getZoom(), 8));

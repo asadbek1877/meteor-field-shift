@@ -53,6 +53,7 @@ _ADVICE = {
         "demand": "The air now takes {d:+.0f} mm more water per year from fields (reference evapotranspiration {base:.0f} to {recent:.0f} mm).",
         "hot_days": "Days hotter than 35 °C: {base:.0f} per year before, {recent:.0f} now.",
         "frost": "The last spring frost now comes around {recent} (before: {base}), and the frost-free season is {d:+.0f} days longer.",
+        "frost_shorter": "The last spring frost now comes around {recent} (before: {base}), and the frost-free season is {d:.0f} days shorter.",
         "sowing": "{crop}: the suitable sowing date moved from {base} to {recent} ({d:+.0f} days).",
         "crop_stress": "{crop}: in {share:.0%} of recent years there were at least {limit} days above {thr} °C in its sensitive stage (before: {before:.0%}).",
         "now_dry": "The last 30 days brought {rain} mm of rain, drier than {pct}% of the same dates on record.",
@@ -78,6 +79,7 @@ _ADVICE = {
         "demand": "Havo dalalardan yiliga {d:+.0f} mm ko'proq suv olmoqda (etalon bug'lanish {base:.0f} dan {recent:.0f} mm ga).",
         "hot_days": "35 °C dan issiq kunlar: avval yiliga {base:.0f} ta, hozir {recent:.0f} ta.",
         "frost": "Oxirgi bahorgi sovuq hozir taxminan {recent} da (avval: {base}), sovuqsiz mavsum {d:+.0f} kunga uzaygan.",
+        "frost_shorter": "Oxirgi bahorgi sovuq hozir taxminan {recent} da (avval: {base}), sovuqsiz mavsum {d:.0f} kunga qisqargan.",
         "sowing": "{crop}: qulay ekish sanasi {base} dan {recent} ga siljigan ({d:+.0f} kun).",
         "crop_stress": "{crop}: so'nggi yillarning {share:.0%} qismida nozik davrida {thr} °C dan issiq kunlar {limit} tadan oshgan (avval: {before:.0%}).",
         "now_dry": "Oxirgi 30 kunda {rain} mm yomg'ir yog'di. Bu shu sanalar tarixining {pct}% idan quruqroq.",
@@ -125,7 +127,9 @@ def advice(lang: str, climate: dict, crops: list, rotations: dict, now: dict) ->
             vs = best["vs_current"]
             parts = [t["best"].format(best=name(best), score=best["scores"]["total"],
                                       cur=name(cur), cur_score=cur["scores"]["total"])]
-            if vs["water_m3_ha"] >= 100:
+            if vs["water_pct"] is None:
+                pass  # current rotation needs no irrigation water, so a percentage has no meaning
+            elif vs["water_m3_ha"] >= 100:
                 parts.append(t["best_water_less"].format(m3=vs["water_m3_ha"], pct=abs(vs["water_pct"])))
             elif vs["water_m3_ha"] <= -100:
                 parts.append(t["best_water_more"].format(m3=-vs["water_m3_ha"], pct=abs(vs["water_pct"])))
@@ -160,9 +164,10 @@ def advice(lang: str, climate: dict, crops: list, rotations: dict, now: dict) ->
         add("climate", "warning" if hd["delta"] >= 7 else "info", t["hot_days"].format(base=hd["baseline"], recent=hd["recent"]))
     fr = climate.get("frost")
     if fr and abs(fr["frost_free_change_days"]) >= 5:
-        add("climate", "info", t["frost"].format(recent=day(lang, fr["recent"]["last_spring_frost"]),
-                                                 base=day(lang, fr["baseline"]["last_spring_frost"]),
-                                                 d=fr["frost_free_change_days"]))
+        change = fr["frost_free_change_days"]
+        add("climate", "info", t["frost" if change > 0 else "frost_shorter"].format(
+            recent=day(lang, fr["recent"]["last_spring_frost"]),
+            base=day(lang, fr["baseline"]["last_spring_frost"]), d=abs(change)))
 
     # 3. crops
     for c in crops:
