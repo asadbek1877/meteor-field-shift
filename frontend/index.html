@@ -7,16 +7,123 @@
   <meta name="description" content="Compare crop rotations for your field with 35 years of NASA climate data.">
   <link rel="stylesheet" href="/vendor/leaflet.css">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/hero.css">
+  <link rel="preload" as="image" href="/media/space-poster.jpg" fetchpriority="high">
 </head>
 <body data-page="home" data-title="page_title_home">
   <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
+  <!-- Landing journey: three full-screen scenes over one continuous camera move
+       (space, approach, surface). Styles in hero.css, scene controller in hero.js. -->
+  <div class="journey" id="journey" data-scene="1" role="region" data-t-aria="journey_label">
+    <script>(function (j) {
+      if (location.hash === "#app") { j.hidden = true; return; }
+      document.documentElement.classList.add("journey-on");
+      j.classList.add("is-armed");
+    })(document.currentScript.parentElement);</script>
+    <div class="journey-stage" aria-hidden="true">
+      <video class="jv jv-1" data-video="space" data-src="/media/space.mp4" poster="/media/space-poster.jpg"
+        muted loop playsinline preload="auto" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      <video class="jv jv-2" data-video="approach" data-src="/media/approach.mp4"
+        muted playsinline preload="none" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      <video class="jv jv-3" data-video="surface" data-src="/media/surface.mp4" poster="/media/surface-poster.jpg"
+        muted playsinline preload="none" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      <div class="space-fx">
+        <div class="hero-glow"></div>
+        <canvas class="hero-stars"></canvas>
+      </div>
+      <div class="journey-flare"></div>
+      <div class="scrim scrim-1"></div>
+      <div class="scrim scrim-3"></div>
+      <div class="journey-vignette"></div>
+    </div>
+
+    <!-- Scene 1: space -->
+    <section class="scene-ui ui-1" aria-labelledby="hero-title">
+      <div class="hero-nav" data-enter="down" style="--d: 2500">
+        <a class="hero-brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span>TerraShift</a>
+        <nav class="hero-links" data-t-aria="main_nav_label">
+          <a href="/rotations.html" data-t="nav_rotations"></a>
+          <a href="/climate.html" data-t="nav_climate"></a>
+          <a href="/crops.html" data-t="nav_crops"></a>
+          <a href="/sources.html" data-t="nav_sources"></a>
+        </nav>
+        <div class="hero-lang" role="group" data-t-aria="language_group">
+          <button type="button" data-lang="uz">UZ</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </div>
+      <div class="hero-copy">
+        <p class="hero-eyebrow" data-enter style="--d: 1100; --o: 60" data-t="hero_eyebrow"></p>
+        <h1 class="hero-title" id="hero-title">
+          <span class="hero-title-top" data-enter style="--d: 1300; --o: 100" data-t="hero_title_top"></span>
+          <span class="hero-title-main" data-enter style="--d: 1480; --o: 140"><span data-t="hero_title_strong"></span> <span class="hero-accent" data-t="hero_title_accent"></span></span>
+        </h1>
+        <p class="hero-lead" data-enter style="--d: 1700; --o: 180" data-t="hero_lead"></p>
+        <button type="button" class="hero-cta" id="journey-start" data-enter style="--d: 1920; --o: 120">
+          <span data-t="hero_cta"></span>
+          <span class="hero-cta-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></span>
+        </button>
+        <ul class="hero-feats">
+          <li data-enter style="--d: 2150; --o: 220">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 9.5 5 5M7 12l-4-4 4-4 4 4M17 20l-4-4 4-4 4 4M12 7l5 5-5 5-5-5zM4 17a3 3 0 0 0 3 3M2.5 18.5A5 5 0 0 0 5.5 21.5"/></svg>
+            <span data-t="hero_feat_satellite"></span>
+          </li>
+          <li data-enter style="--d: 2270; --o: 250">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg>
+            <span data-t="hero_feat_analysis"></span>
+          </li>
+          <li data-enter style="--d: 2390; --o: 280">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-14 15-14 0 9-5 14-13 14M4 21c2-6 6-9 11-11"/></svg>
+            <span data-t="hero_feat_farming"></span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Scene 3: surface. Scene 2 (the approach) is video only. -->
+    <section class="scene-ui ui-3" aria-labelledby="feature-title" inert>
+      <div class="hero-nav" data-enter="down" style="--d: 1300">
+        <button type="button" class="hero-brand" id="journey-restart" data-t-aria="journey_restart"><span class="logo" aria-hidden="true"></span>TerraShift</button>
+        <div class="hero-lang" role="group" data-t-aria="language_group">
+          <button type="button" data-lang="uz">UZ</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </div>
+      <div class="feature-copy">
+        <p class="feature-tag" data-enter style="--d: 150">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z"/><path d="m4.2 10.6 7.8 3.9 7.8-3.9L22 11.7l-10 5-10-5z" opacity=".8"/><path d="m4.2 15.3 7.8 3.9 7.8-3.9 2.2 1.1-10 5-10-5z" opacity=".6"/></svg>
+          <span class="num" aria-hidden="true">01&nbsp;&nbsp;/</span>
+          <span data-t="feature_tag"></span>
+        </p>
+        <h2 class="feature-title" id="feature-title" tabindex="-1">
+          <span data-enter style="--d: 330" data-t="feature_title"></span>
+          <span class="hero-accent" data-enter style="--d: 500" data-t="feature_title_accent"></span>
+        </h2>
+        <p class="feature-lead" data-enter style="--d: 700" data-t="feature_lead"></p>
+        <ul class="feature-tiles">
+          <li data-enter style="--d: 920"><a class="feature-tile is-primary" href="#app" data-journey-exit>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-9M12 13C12 9 9.5 6.5 5 6.5c0 4.5 2.5 6.5 7 6.5ZM12 11c0-4 2.5-6.5 7-6.5 0 4.5-2.5 6.5-7 6.5ZM6 20h12"/></svg>
+            <span data-t="feature_tile_land"></span></a></li>
+          <li data-enter style="--d: 1040"><a class="feature-tile" href="/climate.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 16a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 9.2 3.5 3.5 0 0 1 17 16ZM9 19l-.5 1.5M12.5 19l-.5 1.5M16 19l-.5 1.5"/></svg>
+            <span data-t="feature_tile_weather"></span></a></li>
+          <li data-enter style="--d: 1160"><a class="feature-tile" href="/crops.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg>
+            <span data-t="feature_tile_resources"></span></a></li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <!-- Field app: shown after the journey, or directly with /#app. -->
+  <div id="app" class="app-shell">
+  <header class="top" id="app-top">
     <a class="brand" href="/" aria-label="TerraShift">
       <span class="logo" aria-hidden="true"></span>
       <span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span>
     </a>
     <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/" data-page-link="home" data-t="nav_home"></a>
+      <a href="/#app" data-page-link="home" data-t="nav_home"></a>
       <a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
       <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a>
       <a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
@@ -109,9 +216,11 @@
     </div>
     <div id="fullscreen-map-host" class="fullscreen-map-host"></div>
   </dialog>
+  </div>
 
   <script src="/vendor/leaflet.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
+  <script src="/hero.js"></script>
 </body>
 </html>
