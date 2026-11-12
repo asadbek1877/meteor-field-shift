@@ -6,6 +6,7 @@ analyze()  climate shift between two periods, trends, projection, frost season,
 """
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from datetime import date, timedelta
 
@@ -55,6 +56,7 @@ class Days:
 
 
 _prepared: dict[tuple, Days] = {}
+_prepared_lock = threading.Lock()
 
 
 def _fill(values: list, n: int, default):
@@ -117,9 +119,10 @@ def prepare(data: dict) -> Days:
 
     days = Days(lat, data["lon"], elev, data.get("resolution", "daily"), start, n, t, tmax, tmin,
                 rain, et0, soil, year, doy, spans, pm_days / n if n else 0.0, gaps)
-    if len(_prepared) > 24:
-        _prepared.pop(next(iter(_prepared)))
-    _prepared[key] = days
+    with _prepared_lock:  # requests run in parallel threads
+        if len(_prepared) > 24:
+            _prepared.pop(next(iter(_prepared)), None)
+        _prepared[key] = days
     return days
 
 

@@ -275,12 +275,15 @@ def soil(provider: dict, lat: float, lon: float) -> dict:
         return _soil_cache[key]
     body = _fetch(provider, lat, lon)
     values = {}
-    for layer in body.get("properties", {}).get("layers", []):
-        factor = layer.get("unit_measure", {}).get("d_factor") or 1
-        means = [d["values"].get("mean") for d in layer.get("depths", [])]
-        means = [m for m in means if m is not None]
-        if means:
-            values[layer["name"]] = sum(means) / len(means) / factor
+    try:
+        for layer in body.get("properties", {}).get("layers", []):
+            factor = layer.get("unit_measure", {}).get("d_factor") or 1
+            means = [d["values"].get("mean") for d in layer.get("depths", [])]
+            means = [m for m in means if m is not None]
+            if means:
+                values[layer["name"]] = sum(means) / len(means) / factor
+    except (AttributeError, KeyError, TypeError, ValueError, ZeroDivisionError) as exc:
+        raise ProviderDown(f"unexpected response ({type(exc).__name__})") from exc
     if "clay" not in values or "sand" not in values:
         raise ProviderDown("no soil data for this point")
     clay, sand = values["clay"], values["sand"]  # percent
@@ -301,7 +304,15 @@ def soil(provider: dict, lat: float, lon: float) -> dict:
 
 def forecast(provider: dict, lat: float, lon: float) -> dict:
     """Daily forecast normalised to a small structure."""
-    daily = _fetch(provider, lat, lon).get("daily") or {}
+    body = _fetch(provider, lat, lon)
+    try:
+        return _forecast_days(provider, body)
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise ProviderDown(f"unexpected response ({type(exc).__name__})") from exc
+
+
+def _forecast_days(provider: dict, body) -> dict:
+    daily = body.get("daily") or {}
     times = daily.get("time") or []
     if not times:
         raise ProviderDown("empty forecast")

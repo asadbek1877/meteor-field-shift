@@ -8,11 +8,12 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from backend import agro, climate, nasa_client, physics, providers, store
+from backend import agro, climate, nasa_client, physics, providers, store, texts
 from backend.main import app
 
 START = date(1991, 1, 1)
 END = date(2026, 11, 7)
+REAL_SOIL, REAL_FORECAST = providers.soil, providers.forecast  # the client fixture replaces them
 
 
 # ---------- physics ----------
@@ -139,6 +140,31 @@ def test_soil_index_and_custom_rotation():
     assert agro.conflicts([["chickpea", "sorghum"]])[0]["overlap_days"] > 0
 
 
+def _advice_inputs():
+    d = climate.prepare(fake_data())
+    field = agro.Field(d)
+    rot = field.rotations("cotton_mono", None, {"water": 100, "income": 0, "soil": 0, "risk": 0})
+    return climate.analyze(d), field.crops(), rot
+
+
+def test_advice_when_current_rotation_needs_no_water():
+    clim, crops, rot = _advice_inputs()
+    best = next(it for it in rot["items"] if it["id"] == rot["best_id"])
+    best["vs_current"].update({"water_m3_ha": -500, "water_pct": None})  # current p50 water is 0
+    for lang in ("en", "uz"):
+        assert texts.advice(lang, clim, crops, rot, {})
+
+
+def test_frost_advice_says_shorter_when_season_shrinks():
+    clim, crops, rot = _advice_inputs()
+    clim["frost"] = {"baseline": {"last_spring_frost": "04-01"}, "recent": {"last_spring_frost": "04-10"},
+                     "frost_free_change_days": -7}
+    frost = lambda lang: next(a["text"] for a in texts.advice(lang, clim, crops, rot, {})
+                              if "frost-free" in a["text"] or "sovuqsiz" in a["text"])
+    assert "7 days shorter" in frost("en") and "-7" not in frost("en")
+    assert "7 kunga qisqargan" in frost("uz") and "-7" not in frost("uz")
+
+
 # ---------- API ----------
 
 @pytest.fixture
@@ -202,6 +228,19 @@ def test_degrades_step_by_step(client, monkeypatch):
     body = client.get("/api/analyze?lat=-10&lon=-50").json()
     assert body["source"] == "monthly" and body["coverage"]["climate"] == "approx" and body["rotations"]["items"]
     assert body["climate"]["shift"].get("hot_days") is None and body["now"]["recent"] is None
+
+
+@pytest.mark.parametrize("body", [[1, 2], {"properties": {"layers": [{"name": "clay", "depths": [{}]}]},
+                                          "daily": {"time": ["2026-01-01"], "precipitation_sum": 5}}])
+def test_malformed_provider_response_does_not_break_analysis(client, monkeypatch, body):
+    monkeypatch.setattr(providers, "soil", REAL_SOIL)
+    monkeypatch.setattr(providers, "forecast", REAL_FORECAST)
+    monkeypatch.setattr(providers, "_soil_cache", {})
+    monkeypatch.setattr(providers, "_down_until", {})
+    monkeypatch.setattr(providers, "_fetch", lambda p, lat, lon: body)
+    res = client.get("/api/analyze?lat=41.3&lon=69.2")
+    assert res.status_code == 200 and res.json()["rotations"]["items"]
+    assert {w["provider"] for w in res.json()["warnings"]} == {"soilgrids", "open_meteo"}
 
 
 def test_layer_provider_down_is_reported(client, monkeypatch):
