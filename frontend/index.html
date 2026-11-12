@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TerraShift</title>
+  <meta name="description" content="Compare crop rotations for your field with 35 years of NASA climate data.">
+  <link rel="stylesheet" href="/vendor/leaflet.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="home" data-title="page_title_home">
+  <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
+  <header class="top">
+    <a class="brand" href="/" aria-label="TerraShift">
+      <span class="logo" aria-hidden="true"></span>
+      <span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span>
+    </a>
+    <nav class="site-nav" data-t-aria="main_nav_label">
+      <a href="/" data-page-link="home" data-t="nav_home"></a>
+      <a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
+      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a>
+      <a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
+      <a href="/current.html" data-page-link="current" data-t="nav_now"></a>
+      <a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
+    </nav>
+    <div class="top-actions">
+      <div id="chips" class="chips" aria-live="polite"></div>
+      <div class="seg" role="group" data-t-aria="language_group">
+        <button type="button" data-lang="uz">UZ</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
+    </div>
+  </header>
+  <div id="warnings" class="warnings" aria-live="polite"></div>
+  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+
+  <main class="layout home-layout" id="main-content">
+    <aside class="side">
+      <section class="card">
+        <h2 data-t="field_title"></h2>
+        <p class="hint" data-t="field_hint"></p>
+        <div id="map-workspace" class="map-workspace">
+          <div id="map" class="map" role="application" data-t-aria="map_label"></div>
+          <div id="map-tools" class="map-tools">
+            <div class="field-search">
+              <label class="field" for="place-search">
+                <span data-t="place_search_label"></span>
+                <input id="place-search" type="search" autocomplete="off" data-t-placeholder="place_search_placeholder"
+                  aria-autocomplete="list" aria-controls="place-results" aria-expanded="false">
+              </label>
+              <p class="hint" data-t="place_search_hint"></p>
+              <ul id="place-results" class="place-results" role="listbox" data-t-aria="place_results_label" hidden></ul>
+              <p id="place-search-status" class="hint" role="status" aria-live="polite" aria-atomic="true"></p>
+              <p id="place-info" class="hint place-info" aria-live="polite"></p>
+              <a class="search-attribution" href="https://photon.komoot.io/" target="_blank" rel="noopener" data-t="place_search_attribution"></a>
+            </div>
+            <div class="row wrap">
+              <button type="button" id="locate" class="btn primary" data-t="locate"></button>
+              <span id="coords" class="mono muted"></span>
+            </div>
+            <p id="locate-msg" class="hint warn-text" hidden></p>
+            <div id="presets" class="row wrap"></div>
+            <label class="field"><span data-t="map_layer"></span><select id="layer"></select></label>
+            <label class="field" id="opacity-row" hidden>
+              <span data-t="layer_opacity"></span>
+              <input type="range" id="opacity" min="20" max="100" value="70">
+            </label>
+          </div>
+        </div>
+        <button type="button" id="open-map" class="btn ghost" data-t="map_fullscreen_open"></button>
+      </section>
+      <section class="card">
+        <h2 data-t="passport_title"></h2>
+        <label class="field"><span data-t="current_rotation"></span><select id="current"></select></label>
+        <div id="builder" class="builder" hidden>
+          <p class="hint" data-t="builder_hint"></p>
+          <div id="builder-years"></div>
+          <div class="row wrap">
+            <button type="button" id="add-year" class="btn ghost" data-t="add_year"></button>
+            <button type="button" id="remove-year" class="btn ghost" data-t="remove_year"></button>
+          </div>
+        </div>
+        <label class="field"><span data-t="irrigation_method"></span><select id="irrigation"></select></label>
+        <label class="field"><span data-t="soil_type"></span><select id="soil"></select></label>
+        <p id="soil-note" class="hint"></p>
+      </section>
+      <section class="card">
+        <h2 data-t="priorities_title"></h2>
+        <p class="hint" data-t="priorities_hint"></p>
+        <div id="sliders"></div>
+      </section>
+    </aside>
+    <section class="content">
+      <section class="card verdict" aria-labelledby="verdict">
+        <div class="eyebrow" data-t="verdict_eyebrow"></div>
+        <h1 id="verdict" data-t="loading"></h1>
+        <p id="verdict-sub" class="lead"></p>
+        <ul id="advice-top" class="advice"></ul>
+        <a class="btn primary" href="/rotations.html" data-t="full_comparison"></a>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="map-dialog" class="fullscreen-map-dialog" aria-labelledby="map-dialog-title">
+    <div class="dialog-head">
+      <h2 id="map-dialog-title" data-t="map_fullscreen_title"></h2>
+      <button type="button" id="close-map" class="btn ghost" data-t="map_fullscreen_close" autofocus></button>
+    </div>
+    <div id="fullscreen-map-host" class="fullscreen-map-host"></div>
+  </dialog>
+
+  <script src="/vendor/leaflet.js"></script>
+  <script src="/i18n.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -65,3 +65,8 @@ server.log
 
 # nested legacy repository (kept locally for reference)
 /audit/
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/

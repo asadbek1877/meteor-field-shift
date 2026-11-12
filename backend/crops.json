@@ -1,0 +1,293 @@
+{
+  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22, with sowing dates typical for Uzbekistan. Heat and frost thresholds, residue classes and revenue_usd_ha (typical yield x price) are placeholders: Mizuki must verify each one and add a source before the demo.",
+  "soils": {
+    "light": {
+      "awc_mm_per_m": 100,
+      "name": {
+        "en": "Light (sandy)",
+        "uz": "Yengil (qumloq)"
+      }
+    },
+    "medium": {
+      "awc_mm_per_m": 150,
+      "name": {
+        "en": "Medium (loam)",
+        "uz": "O'rta (qumoq)"
+      }
+    },
+    "heavy": {
+      "awc_mm_per_m": 180,
+      "name": {
+        "en": "Heavy (clay)",
+        "uz": "Og'ir (loyli)"
+      }
+    }
+  },
+  "irrigation": {
+    "furrow": {
+      "efficiency": 0.6,
+      "name": {
+        "en": "Furrow",
+        "uz": "Egatlab"
+      }
+    },
+    "sprinkler": {
+      "efficiency": 0.75,
+      "name": {
+        "en": "Sprinkler",
+        "uz": "Yomg'irlatib"
+      }
+    },
+    "drip": {
+      "efficiency": 0.9,
+      "name": {
+        "en": "Drip",
+        "uz": "Tomchilatib"
+      }
+    }
+  },
+  "levels": {
+    "irrigation_mm": [
+      300,
+      600
+    ],
+    "stress": [
+      0.2,
+      0.5
+    ]
+  },
+  "stress_yield_loss": 0.5,
+  "crops": [
+    {
+      "id": "cotton",
+      "name": {
+        "en": "Cotton",
+        "uz": "Paxta"
+      },
+      "family": "malvaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "low",
+      "sow_doy": 105,
+      "stages": [
+        30,
+        50,
+        55,
+        45
+      ],
+      "kc": [
+        0.35,
+        1.15,
+        0.6
+      ],
+      "root_m": 1.2,
+      "p": 0.65,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 14
+      },
+      "heat": {
+        "tmax_c": 40,
+        "from_day": 60,
+        "to_day": 130,
+        "limit_days": 15
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 40
+      },
+      "revenue_usd_ha": 1800
+    },
+    {
+      "id": "winter_wheat",
+      "name": {
+        "en": "Winter wheat",
+        "uz": "Kuzgi bug'doy"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 288,
+      "stages": [
+        30,
+        140,
+        40,
+        30
+      ],
+      "kc": [
+        0.4,
+        1.15,
+        0.3
+      ],
+      "root_m": 1.5,
+      "p": 0.55,
+      "sowing": {
+        "kind": "autumn",
+        "temp_c": 15
+      },
+      "heat": {
+        "tmax_c": 34,
+        "from_day": 190,
+        "to_day": 235,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": -20,
+        "first_days": 160
+      },
+      "revenue_usd_ha": 1100
+    },
+    {
+      "id": "chickpea",
+      "name": {
+        "en": "Chickpea",
+        "uz": "No'xat"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 69,
+      "stages": [
+        20,
+        30,
+        40,
+        25
+      ],
+      "kc": [
+        0.4,
+        1.0,
+        0.35
+      ],
+      "root_m": 0.8,
+      "p": 0.5,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 8
+      },
+      "heat": {
+        "tmax_c": 36,
+        "from_day": 50,
+        "to_day": 100,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": -8,
+        "first_days": 40
+      },
+      "revenue_usd_ha": 1050
+    },
+    {
+      "id": "sorghum",
+      "name": {
+        "en": "Sorghum",
+        "uz": "Oq jo'xori"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "high",
+      "sow_doy": 130,
+      "stages": [
+        20,
+        35,
+        40,
+        30
+      ],
+      "kc": [
+        0.3,
+        1.05,
+        0.55
+      ],
+      "root_m": 1.4,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 15
+      },
+      "heat": {
+        "tmax_c": 41,
+        "from_day": 50,
+        "to_day": 95,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 800
+    },
+    {
+      "id": "mung_bean",
+      "name": {
+        "en": "Mung bean",
+        "uz": "Mosh"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 176,
+      "stages": [
+        15,
+        25,
+        30,
+        15
+      ],
+      "kc": [
+        0.4,
+        1.05,
+        0.45
+      ],
+      "root_m": 0.8,
+      "p": 0.45,
+      "sowing": null,
+      "heat": {
+        "tmax_c": 41,
+        "from_day": 30,
+        "to_day": 65,
+        "limit_days": 10
+      },
+      "frost": null,
+      "revenue_usd_ha": 1080
+    },
+    {
+      "id": "alfalfa",
+      "name": {
+        "en": "Alfalfa",
+        "uz": "Beda"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": true,
+      "residue": "high",
+      "sow_doy": 74,
+      "stages": [
+        10,
+        20,
+        190,
+        10
+      ],
+      "kc": [
+        0.4,
+        0.95,
+        0.9
+      ],
+      "root_m": 1.5,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 5
+      },
+      "heat": {
+        "tmax_c": 43,
+        "from_day": 60,
+        "to_day": 200,
+        "limit_days": 15
+      },
+      "frost": null,
+      "revenue_usd_ha": 1200
+    }
+  ]
+}
