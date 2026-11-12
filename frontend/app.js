@@ -7,15 +7,17 @@
 
   // ---------- state ----------
   const saved = (() => { try { return JSON.parse(localStorage.getItem("terrashift") || "{}"); } catch { return {}; } })();
+  if (!saved.picked) { delete saved.lat; delete saved.lon; delete saved.locationLabel; }  // old builds saved a default point
   const state = Object.assign({
-    lat: 40.1158, lon: 67.8422, lang: "uz", soil: "auto", irrigation: "furrow", current: null,
+    lat: null, lon: null, picked: false, lang: "uz", soil: "auto", irrigation: "furrow", current: null,
     customYears: [["cotton", ""], ["winter_wheat", ""]],
     weights: { water: 40, income: 20, soil: 20, risk: 20 }, layer: "", opacity: 70, metric: "t_mean", locationLabel: "",
   }, saved);
   const save = () => { try { localStorage.setItem("terrashift", JSON.stringify(state)); } catch { /* private mode */ } };
 
-  let options = null, data = null, map = null, marker = null, overlay = null, layers = [];
-  let placeTimer = null, placeController = null, placeResults = [], activePlaceIndex = -1;
+  let options = null, data = null, map = null, marker = null, overlay = null, outline = null, layers = [];
+  let placeController = null, placeResults = [], activePlaceIndex = -1;
+  const hasPoint = () => state.picked && Number.isFinite(state.lat) && Number.isFinite(state.lon);
   const charts = {};
 
   // ---------- texts and numbers ----------
@@ -70,6 +72,7 @@
 
   async function analyze() {
     save();
+    if (!hasPoint()) { renderNoPoint(); return; }
     if (controller) controller.abort();
     const requestController = new AbortController();
     controller = requestController;
@@ -107,28 +110,50 @@
   // ---------- map ----------
   function initMap() {
     if (!$("map")) return;
-    map = L.map("map", { zoomControl: true, attributionControl: true }).setView([state.lat, state.lon], 7);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
-    marker = L.marker([state.lat, state.lon], { icon: L.divIcon({ className: "", html: '<div class="pin"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map);
-    map.on("click", (e) => setPoint(e.latlng.lat, e.latlng.lng, false, ""));
+    map = L.map("map", { zoomControl: true, attributionControl: true, worldCopyJump: true });
+    if (hasPoint()) map.setView([state.lat, state.lon], 10);
+    else map.setView([25, 15], 2);  // the whole world: nothing is chosen until the user searches, locates or clicks
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+    map.on("click", (e) => { clearOutline(); setPoint(e.latlng.lat, e.latlng.lng, false, ""); });
   }
 
-  function setPoint(lat, lon, recenter = true, locationLabel = "") {
-    if (!map || !marker) return;
+  function pinIcon(status) {
+    return L.divIcon({ className: "", html: `<div class="pin${status ? " " + status : ""}"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
+  }
+
+  function setPoint(lat, lon, recenter = true, locationLabel = "", zoom = 13) {
+    if (!map) return;
     state.lat = Math.round(lat * 1e4) / 1e4;
     state.lon = Math.round((((lon + 180) % 360 + 360) % 360 - 180) * 1e4) / 1e4;  // wrap any world copy to -180..180
+    state.picked = true;
+    if (state.current !== "custom") state.current = null;  // each region has its own typical rotation
     state.locationLabel = locationLabel;
-    marker.setLatLng([state.lat, state.lon]);
-    if (recenter) map.setView([state.lat, state.lon], Math.max(map.getZoom(), 8));
+    if (!marker) marker = L.marker([state.lat, state.lon], { icon: pinIcon("checking") }).addTo(map);
+    marker.setLatLng([state.lat, state.lon]).setIcon(pinIcon("checking"));
+    if (recenter) map.setView([state.lat, state.lon], Math.max(map.getZoom(), zoom));
     $("coords").textContent = `${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
-    if ($("place-search")) $("place-search").value = locationLabel;
+    if ($("place-search") && locationLabel) $("place-search").value = locationLabel;
     if ($("place-info")) $("place-info").textContent = locationLabel ? t("place_selected", { place: locationLabel }) : "";
-    document.querySelectorAll("#presets .btn").forEach((b) => {
-      const selected = +b.dataset.lat === state.lat && +b.dataset.lon === state.lon;
-      b.classList.toggle("active", selected);
-      b.setAttribute("aria-pressed", String(selected));
-    });
     analyze();
+  }
+
+  function clearOutline() { if (outline && map) { map.removeLayer(outline); outline = null; } }
+
+  // Show a found place: outline and whole extent for a country or region, a close view for a village.
+  function showPlace(place) {
+    clearOutline();
+    if (place.outline) {
+      outline = L.geoJSON(place.outline, { interactive: false, style: { color: css("--accent-strong") || "#2563eb", weight: 2, fillOpacity: 0.06 } }).addTo(map);
+    }
+    const b = place.bbox;
+    const big = !!b && (Math.abs(b[2] - b[0]) > 0.05 || Math.abs(b[3] - b[1]) > 0.05);
+    if (big) {
+      map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: [16, 16], maxZoom: 13 });
+      setPoint(place.lat, place.lon, false, place.label);
+      if ($("place-info")) $("place-info").textContent = t("place_selected", { place: place.label }) + " " + t("place_area_hint");
+    } else {
+      setPoint(place.lat, place.lon, true, place.label, 15);
+    }
   }
 
   function renderLayerSelect() {
@@ -163,19 +188,9 @@
     if (!window.isSecureContext || !navigator.geolocation) return fail("locate_insecure");
     setPending(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setPending(false); setPoint(pos.coords.latitude, pos.coords.longitude); },
+      (pos) => { setPending(false); clearOutline(); setPoint(pos.coords.latitude, pos.coords.longitude, true, t("my_location"), 15); },
       (err) => { fail(err.code === 1 ? "locate_denied" : "locate_unavailable"); },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
-  }
-
-  function placeName(properties) {
-    return properties.name || properties.locality || properties.street || properties.district || properties.city || properties.county || properties.state || properties.country || "";
-  }
-
-  function placeContext(properties, primary) {
-    return [...new Set([properties.locality, properties.district, properties.city, properties.county, properties.state, properties.country])]
-      .filter((part) => part && part !== primary)
-      .join(", ");
   }
 
   function hidePlaceResults() {
@@ -183,42 +198,22 @@
     if (!list || !input) return;
     list.hidden = true;
     list.replaceChildren();
-    placeResults = [];
     input.setAttribute("aria-expanded", "false");
     input.removeAttribute("aria-activedescendant");
     activePlaceIndex = -1;
   }
 
-  function renderPlaceResults(features) {
+  function renderPlaceResults(chosen) {
     const list = $("place-results");
     if (!list) return;
-    placeResults = features.map((feature) => {
-      const properties = feature.properties || {};
-      const primary = placeName(properties);
-      const context = placeContext(properties, primary);
-      const coordinates = feature.geometry && feature.geometry.coordinates;
-      return {
-        primary,
-        context,
-        label: [primary, context].filter(Boolean).join(", "),
-        lon: Number(coordinates && coordinates[0]),
-        lat: Number(coordinates && coordinates[1]),
-      };
-    }).filter((place) => place.primary && Number.isFinite(place.lat) && Number.isFinite(place.lon)
-      && place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180);
     activePlaceIndex = -1;
-    if (!placeResults.length) {
-      hidePlaceResults();
-      $("place-search-status").textContent = t("place_search_empty");
-      return;
-    }
+    if (placeResults.length < 2) { hidePlaceResults(); return; }
     list.innerHTML = placeResults.map((place, index) => `
-      <li role="presentation"><button type="button" class="place-option" role="option" id="place-result-${index}" aria-selected="false" tabindex="-1" data-place-index="${index}">
-        <span>${esc(place.primary)}</span>${place.context ? `<small>${esc(place.context)}</small>` : ""}
+      <li role="presentation"><button type="button" class="place-option${index === chosen ? " active" : ""}" role="option" id="place-result-${index}" aria-selected="${index === chosen}" tabindex="-1" data-place-index="${index}">
+        <span>${esc(place.name)}</span>${place.context ? `<small>${esc(place.context)}</small>` : ""}
       </button></li>`).join("");
     list.hidden = false;
     $("place-search").setAttribute("aria-expanded", "true");
-    $("place-search-status").textContent = t("place_search_count", { n: placeResults.length });
   }
 
   async function searchPlaces(query) {
@@ -227,13 +222,21 @@
     placeController = requestController;
     $("place-search-status").textContent = t("place_searching");
     $("place-search").setAttribute("aria-busy", "true");
+    if ($("place-go")) $("place-go").disabled = true;
     try {
-      const params = new URLSearchParams({ q: query, limit: 6, lang: state.lang });
-      const response = await fetch(`/api/places?${params}`, { signal: requestController.signal });
-      if (!response.ok) throw new Error(`Place search failed (${response.status})`);
-      const result = await response.json();
+      const params = new URLSearchParams({ q: query, limit: 5, lang: state.lang });
+      const result = await api(`/api/places?${params}`, { signal: requestController.signal });
       if (placeController !== requestController) return;
-      renderPlaceResults(Array.isArray(result.features) ? result.features : []);
+      placeResults = (Array.isArray(result.results) ? result.results : [])
+        .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180);
+      if (!placeResults.length) {
+        hidePlaceResults();
+        $("place-search-status").textContent = t("place_search_empty");
+        return;
+      }
+      $("place-search-status").textContent = placeResults.length > 1 ? t("place_search_count", { n: placeResults.length }) : "";
+      renderPlaceResults(0);
+      showPlace(placeResults[0]);
     } catch (err) {
       if (err.name === "AbortError") return;
       if (placeController === requestController) {
@@ -241,17 +244,19 @@
         $("place-search-status").textContent = t("place_search_error");
       }
     } finally {
-      if (placeController === requestController) $("place-search").setAttribute("aria-busy", "false");
+      if (placeController === requestController) {
+        $("place-search").setAttribute("aria-busy", "false");
+        if ($("place-go")) $("place-go").disabled = false;
+      }
     }
   }
 
   function choosePlace(index) {
     const place = placeResults[index];
     if (!place) return;
-    $("place-search").value = place.label;
     $("place-search-status").textContent = "";
-    hidePlaceResults();
-    setPoint(place.lat, place.lon, true, place.label);
+    renderPlaceResults(index);
+    showPlace(place);
   }
 
   function updateActivePlace(index) {
@@ -266,13 +271,7 @@
 
   // ---------- forms ----------
   function renderForms() {
-    if ($("presets")) $("presets").innerHTML = options.presets.map((p) =>
-      `<button type="button" class="btn ghost" data-lat="${p.lat}" data-lon="${p.lon}" aria-pressed="${p.lat === state.lat && p.lon === state.lon}">${esc(name(p))}</button>`).join("");
-    if ($("current")) {
-      $("current").innerHTML = options.rotations.map((r) => `<option value="${esc(r.id)}">${esc(name(r))}</option>`).join("") +
-        `<option value="custom">${esc(t("custom_rotation"))}</option>`;
-      $("current").value = state.current || options.default_current;
-    }
+    renderCurrentSelect();
     if ($("irrigation")) {
       $("irrigation").innerHTML = options.irrigation.map((m) =>
         `<option value="${esc(m.id)}">${esc(name(m))} · ${esc(t("efficiency", { pct: Math.round(m.efficiency * 100) }))}</option>`).join("");
@@ -294,6 +293,22 @@
     renderBuilder();
   }
 
+  // Rotations differ by region, so the "current rotation" list is filled from the latest analysis.
+  function renderCurrentSelect() {
+    const sel = $("current");
+    if (!sel) return;
+    const items = data && data.rotations ? data.rotations.items : [];
+    const origin = (data && data.region && data.region.origin_text) || {};
+    const typical = items.filter((r) => r.origin === "typical" || r.is_current);
+    const rest = items.filter((r) => !typical.includes(r));
+    sel.innerHTML = (items.length
+      ? [...typical, ...rest].map((r) => `<option value="${esc(r.id)}">${esc(name(r))}${origin[r.origin] ? " · " + esc(origin[r.origin]) : ""}</option>`).join("")
+      : `<option value="">${esc(t(hasPoint() ? "current_none" : "current_pick_place"))}</option>`) +
+      `<option value="custom">${esc(t("custom_rotation"))}</option>`;
+    sel.value = state.current === "custom" ? "custom" : (data && data.rotations ? data.rotations.current_id : "");
+    if ($("builder")) $("builder").hidden = sel.value !== "custom";
+  }
+
   function renderWeights() {
     if (!$("sliders")) return;
     const sum = Object.values(state.weights).reduce((a, b) => a + b, 0) || 1;
@@ -302,7 +317,7 @@
 
   function renderBuilder() {
     if (!$("builder-years")) return;
-    $("builder").hidden = $("current").value !== "custom";
+    $("builder").hidden = !$("current") || $("current").value !== "custom";
     const opts = (sel, empty) => (empty ? `<option value="">${esc(t("second_crop"))}</option>` : "") +
       options.crops.map((c) => `<option value="${esc(c.id)}"${c.id === sel ? " selected" : ""}>${esc(name(c))}</option>`).join("");
     $("builder-years").innerHTML = state.customYears.map((y, i) => `
@@ -317,23 +332,122 @@
   const adviceHtml = (group) => (data.advice || []).filter((a) => a.group === group)
     .map((a) => `<li class="${esc(a.severity)}"><span class="ico" aria-hidden="true">${ICON[a.severity] || "i"}</span><span>${esc(a.text)}</span></li>`).join("");
 
+  // Card shown on every page: can crops grow at this point at all, and why not.
+  function suitCard() {
+    let card = $("suit-card");
+    if (!card) {
+      const main = document.querySelector("main");
+      if (!main) return null;
+      card = document.createElement("section");
+      card.id = "suit-card";
+      card.className = "card suit";
+      card.setAttribute("aria-live", "polite");
+      card.hidden = true;
+      main.prepend(card);
+    }
+    return card;
+  }
+
+  function renderSuitability() {
+    const s = data.suitability, card = suitCard();
+    if (marker) marker.setIcon(pinIcon(s ? s.status : ""));
+    if (!card) return;
+    if (!s || (s.status === "ok" && !s.items.length && !s.note)) { card.hidden = true; return; }
+    const lv = { unsuitable: "critical", limited: "warning", info: "info" };
+    const items = s.items.map((r) => `
+      <li class="${lv[r.level] || "info"}"><span class="ico" aria-hidden="true">${ICON[lv[r.level]] || "i"}</span>
+        <span><b>${esc(r.title)}</b><br>${esc(r.detail)}</span></li>`).join("");
+    card.className = `card suit ${s.status}`;
+    card.innerHTML = `
+      <div class="eyebrow">${esc(t("suit_eyebrow"))}</div>
+      <h2>${esc(s.headline)}</h2>
+      <p class="lead">${esc(s.summary)}</p>
+      ${items ? `<ul class="advice">${items}</ul>` : ""}
+      ${s.todo ? `<p class="todo">${esc(s.todo)}</p>` : ""}
+      ${s.land && s.land.place ? `<p class="hint">${esc(t("suit_place", { place: s.land.place }))}</p>` : ""}
+      ${s.facts ? `<p class="hint">${esc(t("suit_facts"))} ${esc(s.facts)}</p>` : ""}
+      ${s.note ? `<p class="hint">${esc(s.note)}</p>` : ""}`;
+    card.hidden = false;
+  }
+
+  // "What is grown in <country>": FAOSTAT shares, whether each crop works at this point, and income.
+  function renderRegion() {
+    const card = $("region-card");
+    if (!card) return;
+    const r = data.region;
+    if (!r) { card.hidden = true; return; }
+    const pct = (v) => (v >= 0.1 ? Math.round(v * 100) : Math.round(v * 1000) / 10) + "%";
+    const max = Math.max(...r.top.map((x) => x.share), 0.01);
+    const rows = r.top.map((x) => `
+      <li class="${x.here === "yes" ? "yes" : x.here === "no" ? "no" : "na"}">
+        <span class="nm">${esc(x.name)}</span>
+        <span class="bar" aria-hidden="true"><span style="width:${Math.max(2, 100 * x.share / max)}%"></span></span>
+        <span class="pc">${pct(x.share)}</span>
+        <span class="here" title="${esc(x.reason || "")}">${x.here === "yes" ? "✓ " : x.here === "no" ? "✕ " : ""}${esc(x.here_text)}${x.reason ? `<small>${esc(x.reason)}</small>` : ""}</span>
+      </li>`).join("");
+    const econ = Object.entries(r.economics || {});
+    const table = econ.length ? `
+      <div class="table-wrap" role="region" tabindex="0" aria-label="${esc(t("region_econ_title"))}"><table class="econ">
+        <thead><tr><th>${esc(t("th_crop"))}</th><th>${esc(t("region_sow"))}</th><th>${esc(t("region_yield"))}</th><th>${esc(t("region_price"))}</th><th>${esc(t("region_income"))}</th></tr></thead>
+        <tbody>${econ.map(([id, e]) => `<tr><td><b>${esc(e.name)}</b>${r.suggested.includes(id) ? `<span class="sub">${esc(t("region_new"))}</span>` : ""}</td>
+          <td>${md(r.sowing[id])}</td>
+          <td class="num">${e.yield_t_ha != null ? fmt(e.yield_t_ha, 1) + " " + t("u_tha") : "–"}</td>
+          <td class="num">${e.price_usd_t != null ? "$" + fmt(e.price_usd_t) : "–"}</td>
+          <td class="num">$${fmt(e.usd_ha)}<span class="sub">${esc(e.source_text)}</span></td></tr>`).join("")}</tbody>
+      </table></div>` : "";
+    card.innerHTML = `
+      <div class="eyebrow">${esc(t("region_eyebrow"))}</div>
+      <h2 id="region-title">${esc(r.title)}</h2>
+      <p class="lead">${esc(r.summary)}</p>
+      ${rows ? `<ul class="shares">${rows}</ul>` : ""}
+      ${r.suggested_text ? `<p class="hint">${esc(r.suggested_text)}</p>` : ""}
+      ${econ.length ? `<h3>${esc(t("region_econ_title"))}</h3>${table}<p class="hint">${esc(t("region_econ_note"))}</p>` : ""}
+      ${r.source_text ? `<p class="hint">${esc(r.source_text)}</p>` : ""}`;
+    card.hidden = false;
+  }
+
+  function renderNoPoint() {
+    const card = suitCard();
+    if (card) {
+      card.className = "card suit empty";
+      card.innerHTML = `<h2>${esc(t("no_point_title"))}</h2><p class="lead">${esc(t($("map") ? "no_point_sub" : "no_point_sub_other"))}</p>` +
+        ($("map") ? "" : `<a class="btn primary" href="/">${esc(t("no_point_link"))}</a>`);
+      card.hidden = false;
+    }
+    if ($("verdict")) { $("verdict").textContent = t("no_point_title"); $("verdict").closest(".verdict").hidden = true; }
+    if ($("region-card")) $("region-card").hidden = true;
+    if ($("verdict-sub")) $("verdict-sub").textContent = "";
+    if ($("coords")) $("coords").textContent = "";
+    if ($("analysis-status")) $("analysis-status").textContent = "";
+  }
+
   function render() {
     if ($("coords")) $("coords").textContent = `${state.lat.toFixed(4)}, ${state.lon.toFixed(4)}`;
+    renderSuitability();
     if ($("warnings")) $("warnings").innerHTML = data.warnings.map((w) => alertHtml(w.severity, w.text)).join("");
     renderChips();
     if ($("layer") && JSON.stringify(data.map_layers.map((l) => l.id)) !== JSON.stringify(layers.map((l) => l.id))) {
       layers = data.map_layers; renderLayerSelect();
     }
     renderSoilNote();
+    renderRegion();
+    renderCurrentSelect();
     const ok = !!data.rotations;
+    const unsuitable = data.suitability && data.suitability.status === "unsuitable";
+    const verdictCard = $("verdict") && $("verdict").closest(".verdict");
+    if (verdictCard) verdictCard.hidden = unsuitable;  // the suitability card already says why
     if (!ok) {
-      if ($("verdict")) $("verdict").textContent = t("no_data_title");
-      if ($("verdict-sub")) $("verdict-sub").textContent = t("no_data_sub");
+      const noCrops = !unsuitable && data.region;
+      if ($("verdict")) $("verdict").textContent = t(unsuitable ? "verdict_unsuitable" : noCrops ? "no_crops_title" : "no_data_title");
+      if ($("verdict-sub")) $("verdict-sub").textContent = unsuitable ? t("verdict_unsuitable_sub") : noCrops ? data.region.summary : t("no_data_sub");
       if ($("advice-top")) $("advice-top").innerHTML = "";
+      if ($("rotations")) { $("rotations").innerHTML = ""; $("rotations-meta").textContent = ""; }
+      if ($("crops")) $("crops").innerHTML = "";
+      if ($("now-card")) $("now-card").hidden = true;
     } else if ($("verdict") || $("verdict-sub") || $("advice-top")) renderVerdict();
+    if (data.climate && $("climate-card")) renderClimate();
     if (ok) {
       if ($("rotations")) renderRotations();
-      if ($("climate-card")) renderClimate();
       if ($("crops")) renderCrops();
       if ($("now-card")) renderNow();
     }
@@ -387,6 +501,8 @@
       const badges = [
         it.id === r.best_id ? `<span class="badge best">${esc(t("badge_best"))}</span>` : "",
         it.is_current ? `<span class="badge">${esc(t("badge_current"))}</span>` : "",
+        it.origin && data.region && data.region.origin_text[it.origin] && it.origin !== "local"
+          ? `<span class="badge origin ${esc(it.origin)}">${esc(data.region.origin_text[it.origin])}</span>` : "",
         it.conflicts.length ? `<span class="badge bad">${esc(t("badge_conflict"))}</span>` : "",
       ].join("");
       const seq = it.years.map((slot, i) => `<span><b>${esc(t("year_n", { n: i + 1 }))}:</b> ${slot.map((c) => esc(name(c))).join(" + ")}</span>`).join("");
@@ -598,11 +714,6 @@
       if (data) render();
       analyze();
       if ($("providers")) loadProviders().catch(showProviderError);
-      if ($("place-search") && $("place-search").value.trim().length >= 3) {
-        clearTimeout(placeTimer);
-        if (placeController) placeController.abort();
-        placeTimer = setTimeout(() => searchPlaces($("place-search").value.trim()), 600);
-      }
     }));
     const workspace = $("map-workspace");
     const fullscreenHost = $("fullscreen-map-host");
@@ -633,17 +744,11 @@
       $("open-map").focus();
     });
     on("locate", "click", locate);
-    on("place-search", "input", (e) => {
-      const query = e.target.value.trim();
-      clearTimeout(placeTimer);
-      if (placeController) placeController.abort();
-      hidePlaceResults();
-      $("place-search").setAttribute("aria-busy", "false");
-      if (query.length < 3) {
-        $("place-search-status").textContent = query ? t("place_search_min") : "";
-        return;
-      }
-      placeTimer = setTimeout(() => searchPlaces(query), 600);
+    on("place-form", "submit", (e) => {
+      e.preventDefault();
+      const query = $("place-search").value.trim();
+      if (query.length < 2) { $("place-search-status").textContent = t("place_search_min"); return; }
+      searchPlaces(query);
     });
     on("place-search", "keydown", (e) => {
       if (e.key === "ArrowDown" && placeResults.length) {
@@ -652,7 +757,7 @@
       } else if (e.key === "ArrowUp" && placeResults.length) {
         e.preventDefault();
         updateActivePlace(activePlaceIndex < 0 ? placeResults.length - 1 : activePlaceIndex - 1);
-      } else if (e.key === "Enter" && activePlaceIndex >= 0) {
+      } else if (e.key === "Enter" && activePlaceIndex >= 0 && !$("place-results").hidden) {
         e.preventDefault();
         choosePlace(activePlaceIndex);
       } else if (e.key === "Escape" && !$("place-results").hidden) {
@@ -665,7 +770,6 @@
       const button = e.target.closest("[data-place-index]");
       if (button) choosePlace(Number(button.dataset.placeIndex));
     });
-    on("presets", "click", (e) => { const b = e.target.closest("button"); if (b) setPoint(+b.dataset.lat, +b.dataset.lon); });
     on("layer", "change", (e) => { state.layer = e.target.value; save(); showOverlay(); });
     on("opacity", "input", (e) => { state.opacity = +e.target.value; if (overlay) overlay.setOpacity(state.opacity / 100); save(); });
     on("current", "change", (e) => { state.current = e.target.value; renderBuilder(); analyze(); });
@@ -716,7 +820,7 @@
     }
     renderForms();
     renderLayerSelect();
-    if ($("map")) setPoint(state.lat, state.lon, true, state.locationLabel);
+    if ($("map") && hasPoint()) setPoint(state.lat, state.lon, true, state.locationLabel, 10);
     else analyze();
     if ($("providers")) loadProviders().catch(showProviderError);
   }

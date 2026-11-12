@@ -31,6 +31,7 @@ BARE_SOIL_KC = 0.2
 RESIDUE_SCORE = {"low": 30, "medium": 60, "high": 100}
 SOIL_WEIGHTS = {"legumes": 0.30, "diversity": 0.20, "cover": 0.20, "residue": 0.20, "perennial": 0.10}
 DEFAULT_WEIGHTS = {"water": 40, "income": 20, "soil": 20, "risk": 20}
+OVERLAP_TOLERANCE_DAYS = 14
 
 
 # ---------- single crop ----------
@@ -44,7 +45,8 @@ def sow_date(crop: dict, harvest_year: int, south: bool) -> date:
     doy = crop["sow_doy"]
     crosses_new_year = doy + sum(crop["stages"]) - 1 > 365
     sow = date(harvest_year - crosses_new_year, 1, 1) + timedelta(days=doy - 1)
-    return sow - timedelta(days=182) if south else sow
+    # A sowing day computed for this very point (localize) is already a real calendar day.
+    return sow - timedelta(days=182) if south and not crop.get("local_sow") else sow
 
 
 def kc_at(day: int, stages: list, kc: list) -> float:
@@ -73,12 +75,15 @@ def simulate(d: Days, crop: dict, harvest_year: int, awc: float) -> dict | None:
         ks = 1.0 if depletion <= raw else max(0.0, (taw - depletion) / (taw - raw))
         depletion = min(taw, max(0.0, depletion + BARE_SOIL_KC * d.et0[i] * ks - d.rain[i]))
 
-    need = rain = irrigation = 0.0
+    need = rain = irrigation = t_sum = 0.0
     events = heat_days = 0
     frost = False
     heat, frost_rule = crop.get("heat"), crop.get("frost")
+    percolation = crop.get("percolation_mm_day", 0.0)  # paddy rice loses water below the root zone
     for day in range(length):
         i = i0 + day
+        t_sum += d.t[i]
+        irrigation += percolation
         etc = kc_at(day, crop["stages"], crop["kc"]) * d.et0[i]
         need += etc
         rain += d.rain[i]
@@ -93,10 +98,13 @@ def simulate(d: Days, crop: dict, harvest_year: int, awc: float) -> dict | None:
         if frost_rule and day < frost_rule["first_days"] and d.tmin[i] <= frost_rule["tmin_c"]:
             frost = True
     stress = min(1.0, heat_days / heat["limit_days"]) if heat else 0.0
-    if frost:
+    t_season = t_sum / length
+    # Too cool on average to ripen in this season (only checked for crops with a limit; winter crops have none).
+    cold = crop.get("season_t_min_c") is not None and t_season < crop["season_t_min_c"]
+    if frost or cold:
         stress = 1.0
     return {"need": need, "rain": rain, "irrigation": irrigation, "events": events,
-            "heat_days": heat_days, "frost": frost, "stress": stress}
+            "heat_days": heat_days, "frost": frost, "cold": cold, "t_season": t_season, "stress": stress}
 
 
 def suitable_sowing_doy(d: Days, crop: dict, year: int) -> int | None:
@@ -117,21 +125,115 @@ def suitable_sowing_doy(d: Days, crop: dict, year: int) -> int | None:
     return None
 
 
-class Field:
-    """Simulation results for one point, soil and irrigation method. Crop-years are computed once."""
+def _monthly_recent(d: Days) -> tuple[list, list]:
+    """Mean temperature and rain total of each calendar month, 2011-2025."""
+    t, rain = [[] for _ in range(12)], [[] for _ in range(12)]
+    for y in range(RECENT[0], RECENT[1] + 1):
+        if y not in d.spans:
+            continue
+        for m in range(12):
+            i0 = d.idx(date(y, m + 1, 1))
+            i1 = d.idx(date(y + (m == 11), (m + 1) % 12 + 1, 1))
+            t[m].append(mean(d.t[i0:i1]))
+            rain[m].append(sum(d.rain[i0:i1]))
+    return [mean(v) for v in t], [mean(v) for v in rain]
 
-    def __init__(self, d: Days, soil: str = "medium", irrigation: str = "furrow"):
+
+def localize(d: Days, crop: dict, monthly: tuple | None = None) -> dict:
+    """The crop with the sowing day of THIS point instead of the Central Asian default.
+
+    spring crops  median day (2011-2025) when the 10-day mean temperature rises above the crop threshold;
+                  where it is warm all year (tropics) the start of the wettest four months is used instead
+    autumn crops  median day when the 10-day mean temperature falls below the threshold
+    A crop gets "no_window" when the threshold is not reached in most years (too cold or too warm).
+    """
+    rule = crop.get("sowing")
+    if not rule or not d.daily:
+        return crop
+    t_month, rain_month = monthly or _monthly_recent(d)
+    if any(v is None for v in t_month):
+        return crop
+    spring = rule["kind"] == "spring"
+    wet = [sum(rain_month[(m + k) % 12] for k in range(4)) for m in range(12)]
+    onset = max(range(12), key=wet.__getitem__) if max(wet) >= 200 else None  # a rainy season exists
+    # Warm all year (no real winter): field crops are sown when the rains start, if it is warm enough then.
+    if spring and min(t_month) >= 10 and onset is not None and t_month[onset] >= rule["temp_c"]:
+        return {**crop, "sow_doy": date(2001, onset + 1, 1).timetuple().tm_yday, "local_sow": True}
+    if spring and min(t_month) >= rule["temp_c"] + 2:
+        return {**crop, "local_sow": False}  # warm and dry all year: irrigated, keep the default calendar
+    if not spring and crop.get("mild_stages") and min(t_month) >= MILD_WINTER_C:
+        crop = _restage(crop, crop["mild_stages"])  # no real dormancy: the crop develops through winter
+    years = [y for y in range(RECENT[0], RECENT[1] + 1) if y in d.spans]
+    found = [v for y in years if (v := suitable_sowing_doy(d, crop, y)) is not None]
+    if len(found) < max(1, len(years) // 2):
+        return {**crop, "no_window": True}
+    if spring and crop.get("frost"):
+        # Farmers wait for the last spring frost that would kill the seedlings, not only for warm soil.
+        found = [max(v, last + 1) if (last := _last_spring_frost(d, y, crop["frost"]["tmin_c"])) else v
+                 for y, v in ((y, suitable_sowing_doy(d, crop, y)) for y in years) if v is not None]
+        # a date that is safe in three years out of four
+        return {**crop, "sow_doy": min(int(percentile(found, 75)), 300), "local_sow": True}
+    return {**crop, "sow_doy": int(percentile(found, 50)), "local_sow": True}
+
+
+MILD_WINTER_C = 5.0  # coldest month at least this warm: winter crops grow through the winter
+
+
+def _restage(crop: dict, stages: list) -> dict:
+    """Same crop with other stage lengths; the heat and frost windows are stretched to match."""
+    f = sum(stages) / sum(crop["stages"])
+    out = {**crop, "stages": list(stages)}
+    if crop.get("heat"):
+        out["heat"] = {**crop["heat"], "from_day": round(crop["heat"]["from_day"] * f), "to_day": round(crop["heat"]["to_day"] * f)}
+    if crop.get("frost"):
+        out["frost"] = {**crop["frost"], "first_days": round(crop["frost"]["first_days"] * f)}
+    return out
+
+
+def _last_spring_frost(d: Days, year: int, tmin_c: float) -> int | None:
+    """Last day of the first half of the growing year (Jan-Jun north, Jul-Dec south) at or below tmin_c."""
+    i0 = d.spans[year][0]
+    first, last_day = (183, 365) if d.lat < 0 else (1, 182)
+    last = None
+    for doy in range(first, last_day + 1):
+        i = i0 + doy - 1
+        if i < d.n and d.tmin[i] <= tmin_c:
+            last = doy
+    return last
+
+
+class Field:
+    """Simulation results for one point, soil and irrigation method. Crop-years are computed once.
+
+    crops    id -> crop (localized for this point); defaults to the crop library as written
+    revenue  id -> USD per hectare (yield x producer price of the country); defaults to revenue_usd_ha
+    """
+
+    def __init__(self, d: Days, soil: str = "medium", irrigation: str = "furrow",
+                 crops: dict | None = None, revenue: dict | None = None):
         self.d = d
         self.soil = soil if soil in CONFIG["soils"] else "medium"
         self.method = irrigation if irrigation in CONFIG["irrigation"] else "furrow"
         self.awc = CONFIG["soils"][self.soil]["awc_mm_per_m"]
         self.efficiency = CONFIG["irrigation"][self.method]["efficiency"]
+        self.lib = crops or CROPS
+        self.revenue = revenue or {}
         self._memo: dict[tuple, dict | None] = {}
 
+    def crop(self, crop_id: str) -> dict:
+        return self.lib.get(crop_id) or CROPS[crop_id]
+
+    def income(self, crop_id: str) -> float:
+        return self.revenue.get(crop_id) or CROPS[crop_id]["revenue_usd_ha"]
+
     def run(self, crop_id: str, year: int) -> dict | None:
-        key = (crop_id, year)
+        return self.run_crop(self.crop(crop_id), year)
+
+    def run_crop(self, crop: dict, year: int) -> dict | None:
+        """One season; a crop placed as a second crop has its own sowing day, so it is its own key."""
+        key = (crop["id"], crop["sow_doy"], crop.get("local_sow", False), tuple(crop["stages"]), year)
         if key not in self._memo:
-            self._memo[key] = simulate(self.d, CROPS[crop_id], year, self.awc)
+            self._memo[key] = simulate(self.d, crop, year, self.awc)
         return self._memo[key]
 
     def gross_m3(self, net_mm: float) -> float:
@@ -141,7 +243,7 @@ class Field:
     # ----- crops -----
 
     def _period(self, crop: dict, period) -> dict | None:
-        rows = [r for y in range(period[0], period[1] + 1) if (r := self.run(crop["id"], y))]
+        rows = [r for y in range(period[0], period[1] + 1) if (r := self.run_crop(crop, y))]
         if not rows:
             return None
         return {
@@ -155,6 +257,8 @@ class Field:
             "heat_days": spread([r["heat_days"] for r in rows]),
             "heat_years_share": rnd(mean(r["heat_days"] >= crop["heat"]["limit_days"] for r in rows), 2),
             "frost_years_share": rnd(mean(r["frost"] for r in rows), 2),
+            "cold_years_share": rnd(mean(r["cold"] for r in rows), 2),
+            "t_season_c": rnd(mean(r["t_season"] for r in rows), 1),
             "stress": rnd(mean(r["stress"] for r in rows), 2),
         }
 
@@ -169,10 +273,10 @@ class Field:
         return {"kind": crop["sowing"]["kind"], "threshold_c": crop["sowing"]["temp_c"],
                 "baseline": _mmdd(base), "recent": _mmdd(recent), "shift_days": rnd(recent - base, 0)}
 
-    def crops(self) -> list[dict]:
+    def crops(self, ids: list[str] | None = None) -> list[dict]:
         south = self.d.lat < 0
         out = []
-        for crop in CONFIG["crops"]:
+        for crop in (self.crop(i) for i in (ids or list(self.lib))):
             recent = self._period(crop, RECENT)
             if not recent:
                 continue
@@ -203,10 +307,10 @@ class Field:
 
     # ----- this week -----
 
-    def week(self, et0_7d: float, rain_7d: float, today: date) -> list[dict]:
+    def week(self, et0_7d: float, rain_7d: float, today: date, ids: list[str] | None = None) -> list[dict]:
         """Irrigation need of the next 7 days for crops that are in the field today."""
         out = []
-        for crop in CONFIG["crops"]:
+        for crop in (self.crop(i) for i in (ids or list(self.lib))):
             length = sum(crop["stages"])
             for year in (today.year, today.year + 1, today.year + 2):
                 sow = sow_date(crop, year, self.d.lat < 0)
@@ -222,16 +326,20 @@ class Field:
 
     # ----- rotations -----
 
-    def rotations(self, current_id: str | None, custom: list | None, weights: dict | None) -> dict:
+    def rotations(self, current_id: str | None, custom: list | None, weights: dict | None,
+                  candidates: list[dict] | None = None, default_current: str | None = None) -> dict:
         weights = {k: max(0.0, float((weights or {}).get(k, v))) for k, v in DEFAULT_WEIGHTS.items()}
         if not sum(weights.values()):
             weights = dict(DEFAULT_WEIGHTS)
-        candidates = [dict(r) for r in ROTATIONS["rotations"]]
+        candidates = [dict(r) for r in (candidates if candidates is not None else ROTATIONS["rotations"])]
         if custom:
             candidates.append({"id": "custom", "name": {"en": "My rotation", "uz": "Mening rotatsiyam"}, "years": custom})
             current_id = current_id or "custom"
         ids = {r["id"] for r in candidates}
-        current_id = current_id if current_id in ids else ROTATIONS["default_current"]
+        fallback = default_current if default_current in ids else ROTATIONS["default_current"]
+        if fallback not in ids and candidates:
+            fallback = candidates[0]["id"]
+        current_id = current_id if current_id in ids else fallback
 
         years = [y for y in range(RECENT[0], RECENT[1] + 1)]
         items = []
@@ -244,7 +352,8 @@ class Field:
                 "name": rot["name"],
                 "years": [[{"id": c, "name": CROPS[c]["name"]} for c in slot] for slot in rot["years"]],
                 "is_current": rot["id"] == current_id,
-                "conflicts": conflicts(rot["years"], self.d.lat < 0),
+                "origin": rot.get("origin"),
+                "conflicts": conflicts(rot["years"], self.d.lat < 0, self.lib),
                 "soil": soil_health(rot["years"]),
                 "_per_year": per_year,
             })
@@ -332,13 +441,15 @@ class Field:
         loss = CONFIG["stress_yield_loss"]
         out = {}
         n = len(rot["years"])
+        south = self.d.lat < 0
+        slots = [placed(slot, self.lib, south) for slot in rot["years"]]
         for y in years:
-            runs = [[self.run(crop_id, y) for crop_id in slot] for slot in rot["years"]]
+            runs = [[self.run_crop(crop, y) for crop in slot] for slot in slots]
             if any(r is None for slot in runs for r in slot):
                 continue  # weather record does not cover this year for every crop
             net = sum(r["irrigation"] for slot in runs for r in slot)
             stress = sum(max(r["stress"] for r in slot) for slot in runs)
-            income = sum(CROPS[crop_id]["revenue_usd_ha"] * (1 - loss * r["stress"])
+            income = sum(self.income(crop_id) * (1 - loss * r["stress"])
                          for slot, slot_runs in zip(rot["years"], runs)
                          for crop_id, r in zip(slot, slot_runs))
             out[y] = {"net_mm": net / n, "water": self.gross_m3(net / n),
@@ -363,18 +474,35 @@ def parse_custom(text: str | None) -> list | None:
     return years
 
 
-def conflicts(years: list, south: bool = False) -> list[dict]:
+SECOND_CROP_GAP_DAYS = 7
+
+
+def placed(slot: list, lib: dict, south: bool) -> list[dict]:
+    """The crops of one year as sown: a second crop goes in a week after the first one is harvested."""
+    first = lib.get(slot[0]) or CROPS[slot[0]]
+    out = [first]
+    for crop_id in slot[1:]:
+        crop = lib.get(crop_id) or CROPS[crop_id]
+        prev = out[-1]
+        sow = sow_date(prev, 2001, south) + timedelta(days=sum(prev["stages"]) + SECOND_CROP_GAP_DAYS)
+        out.append({**crop, "sow_doy": sow.timetuple().tm_yday, "local_sow": True, "after": prev["id"]})
+    return out
+
+
+def conflicts(years: list, south: bool = False, crops: dict | None = None) -> list[dict]:
     """Crops whose seasons overlap in the field (checked around the cycle)."""
     spans = []
     for k, slot in enumerate(years):
-        for crop_id in slot:
-            sow = sow_date(CROPS[crop_id], 2001 + k, south)
-            spans.append((sow, sow + timedelta(days=sum(CROPS[crop_id]["stages"])), crop_id))
+        for crop in placed(slot, crops or CROPS, south):
+            sow = sow_date(crop, 2001 + k, south)
+            spans.append((sow, sow + timedelta(days=sum(crop["stages"])), crop["id"]))
     spans.sort()
     out = []
     cycle = timedelta(days=365 * len(years))
     for a, b in zip(spans, spans[1:] + [(spans[0][0] + cycle, spans[0][1] + cycle, spans[0][2])]):
-        if b[0] < a[1] and len(spans) > 1:
+        # Sowing and harvest can each move by about two weeks (wheat is even sown into standing cotton),
+        # so only a longer overlap makes the rotation impossible.
+        if (a[1] - b[0]).days > OVERLAP_TOLERANCE_DAYS and len(spans) > 1:
             out.append({"first": a[2], "second": b[2], "overlap_days": (a[1] - b[0]).days})
     return out
 

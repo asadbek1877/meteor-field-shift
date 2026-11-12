@@ -273,3 +273,46 @@ dialog.fullscreen-map-dialog[open] { display: grid; }
   .prov .desc { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* place search: input + button on one row */
+.search-row { display: flex; gap: 6px; min-width: 0; }
+.search-row input { flex: 1 1 auto; min-width: 0; }
+.search-row .btn { flex: none; }
+
+/* "can crops grow here?" card */
+.suit { display: flex; flex-direction: column; gap: 8px; }
+.suit h2 { margin: 0; }
+.suit .lead { margin: 0; }
+.suit.unsuitable { border-color: var(--critical); background: linear-gradient(135deg, var(--panel), var(--critical-bg)); }
+.suit.limited { border-color: var(--warning); background: linear-gradient(135deg, var(--panel), var(--warning-bg)); }
+.suit.ok { border-color: var(--good); }
+.suit.empty { border-style: dashed; }
+.suit .todo { margin: 0; font-weight: 600; }
+.suit .advice li { line-height: 1.45; }
+
+/* map pin colour follows the verdict */
+.pin.checking { opacity: .65; }
+.pin.unsuitable { background: var(--critical); box-shadow: 0 0 0 2px var(--critical); }
+.pin.limited { background: var(--warning); box-shadow: 0 0 0 2px var(--warning); }
+.pin.ok { background: var(--good); box-shadow: 0 0 0 2px var(--good); }
+
+/* region card: what the country grows and what works here */
+.region h3 { margin: 4px 0 0; font-size: 15px; }
+.shares { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.shares li { display: grid; grid-template-columns: minmax(90px, 1.2fr) minmax(60px, 2fr) 3.2em minmax(110px, 1.4fr); gap: 8px; align-items: center; font-size: 14px; }
+.shares .bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.shares .bar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.shares .pc { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.shares .here { font-size: 13px; }
+.shares .here small { display: block; color: var(--muted); font-size: 12px; }
+.shares li.yes .here { color: var(--good); }
+.shares li.no .here { color: var(--critical); }
+.shares li.no .bar span { background: var(--muted); }
+.shares li.na .here { color: var(--muted); }
+.badge.origin.typical { border-color: var(--good); color: var(--good); }
+.badge.origin.suggested { border-color: var(--info); color: var(--info); }
+@media (max-width: 560px) {
+  .shares li { grid-template-columns: 1fr 3.2em; }
+  .shares .bar { grid-column: 1 / -1; grid-row: 2; }
+  .shares .here { grid-column: 1 / -1; }
+}
