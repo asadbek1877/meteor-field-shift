@@ -17,14 +17,13 @@ from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
-import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import agro, climate, nasa_client, providers, store, texts
+from . import agro, climate, geo, nasa_client, providers, regional, store, suitability, texts
 
 # If NASA is down, a cached point is used only when it is this close to the request.
 FALLBACK_MAX_KM = float(os.getenv("FALLBACK_MAX_KM", "150"))
@@ -90,24 +89,19 @@ def layers():
 
 @app.get("/api/places")
 def search_places(
-    q: str = Query(min_length=3, max_length=200),
+    q: str = Query(min_length=2, max_length=200),
     lang: str = Query(default="en", pattern="^(en|uz)$"),
+    limit: int = Query(default=5, ge=1, le=8),
 ):
-    """Search place names through Photon without requiring browser access to a third party."""
+    """Find a country, region, town or village by name (OpenStreetMap Nominatim, Photon as backup).
+
+    Each result has a centre (lat, lon), a bounding box [south, west, north, east] for
+    fitting the map, and for areas a simplified outline (GeoJSON) to draw.
+    """
     try:
-        response = httpx.get(
-            "https://photon.komoot.io/api/",
-            params={"q": q, "limit": 6, "lang": "en" if lang == "en" else "default"},
-            timeout=8,
-            headers={"User-Agent": "TerraShift/1.0"},
-        )
-        response.raise_for_status()
-        result = response.json()
-    except (httpx.HTTPError, ValueError) as exc:
+        return {"results": geo.search(q, lang, limit)}
+    except geo.GeoDown as exc:
         raise HTTPException(502, "Place search is temporarily unavailable.") from exc
-    if not isinstance(result, dict) or not isinstance(result.get("features"), list):
-        raise HTTPException(502, "Place search returned an invalid response.")
-    return result
 
 
 # ---------- providers (site settings page) ----------
@@ -254,6 +248,7 @@ def analyze(
         fc_job = pool.submit(providers.forecast, fc_p, lat, lon) if fc_p and on(fc_p) else None
         layer_jobs = {p["id"]: pool.submit(providers.check, p) for p in by_kind("layers") if on(p)}
         json_jobs = {p["id"]: pool.submit(providers.fetch_json, p, lat, lon) for p in by_kind("json") if on(p)}
+        cover_job = pool.submit(geo.land_cover, lat, lon, lang)
 
     warnings, statuses, extra, map_layers = [], [], {}, []
 
@@ -324,17 +319,38 @@ def analyze(
                 warn(p["id"], "warning", msg["json_failed"].format(name=p["name"]))
 
     # analysis with whatever arrived
-    result = {"periods": None, "climate": None, "crops": None, "rotations": None, "now": None, "advice": None}
+    # land cover: is the point a field at all, or a building, road, water...?
+    try:
+        cover = cover_job.result()
+    except geo.GeoDown:
+        cover = None
+
+    result = {"periods": None, "climate": None, "crops": None, "rotations": None, "now": None, "advice": None, "region": None}
+    suit = suitability.judge(cover, None, False)
     if data:
         days = climate.prepare(data)
-        if not any(v is not None for v in days.soil[-400:]):
-            warn("nasa_power", "warning", msg["not_land"])  # no soil wetness: sea, lake or ice
+        no_soil = data.get("resolution") == "daily" and not any(v is not None for v in days.soil[-400:])
+        suit = suitability.judge(cover, suitability.climate_facts(days), no_soil)
         clim = climate.analyze(days)
-        field = agro.Field(days, soil_class, irrigation)
-        crops = field.crops()
+    if suit["status"] == "unsuitable" and data:
+        # No crop advice for a roof, a road or the sea: keep only the climate of the place.
+        result.update({
+            "periods": {"baseline": list(climate.BASELINE), "recent": list(climate.RECENT)},
+            "climate": clim,
+            "advice": [a for a in texts.advice(lang, clim, [], {"items": []}, {}) if a["group"] == "climate"],
+        })
+    elif data:
+        # What this country grows, what of it works at this point, and rotations built from that.
+        iso = (cover or {}).get("country_code") or geo.country_at(lat, lon)  # offline borders if OSM is down
+        plan = regional.plan(days, iso, soil_class, irrigation)
+        field = plan["field"]
+        crops = field.crops(plan["show"]) if plan["show"] else []
         rot = field.rotations(current, custom_years,
-                              {"water": w_water, "income": w_income, "soil": w_soil, "risk": w_risk})
-        for it in rot["items"]:
+                              {"water": w_water, "income": w_income, "soil": w_soil, "risk": w_risk},
+                              plan["candidates"], plan["default_current"])
+        if not rot["items"]:
+            rot = None
+        for it in (rot or {}).get("items", []):
             for c in it["conflicts"]:
                 warn("rotation", "warning", msg["conflict"].format(
                     name=it["name"][lang], a=agro.CROPS[c["first"]]["name"][lang],
@@ -348,12 +364,14 @@ def analyze(
             week_basis = None
         now = {
             "recent": recent, "outlook": look, "forecast": forecast, "week_basis": week_basis,
-            "week": field.week(week_basis["et0_7d_mm"], week_basis["rain_7d_mm"], date.today()) if week_basis else [],
+            "week": field.week(week_basis["et0_7d_mm"], week_basis["rain_7d_mm"], date.today(), plan["show"])
+            if week_basis and plan["show"] else [],
         }
         result = {
             "periods": {"baseline": list(climate.BASELINE), "recent": list(climate.RECENT)},
             "climate": clim, "crops": crops, "rotations": rot, "now": now,
-            "advice": texts.advice(lang, clim, crops, rot, now),
+            "advice": texts.advice(lang, clim, crops, rot or {"items": []}, now),
+            "region": texts.region(lang, plan["profile"]),
         }
 
     quality = {"live": "full", "cache": "full", "monthly": "approx", "fallback": "approx"}.get(source, "skipped")
@@ -370,6 +388,17 @@ def analyze(
     if soil_info:
         datasets.append({"name": "SoilGrids 2.0", "detail": "ISRIC, 250 m", "sources": [],
                          "url": "https://soilgrids.org/", "nasa": False})
+    region_info = result.get("region") or {}
+    if region_info.get("local"):
+        datasets.append({"name": "MapSPAM 2020 (IFPRI)", "detail": "harvested area of 46 crops, ~10 km grid, by province",
+                         "sources": [region_info["local"]["region"]], "url": "https://doi.org/10.7910/DVN/SWPENT", "nasa": False})
+    if region_info.get("country"):
+        datasets.append({"name": "FAOSTAT (FAO)", "detail": "national yield and producer price",
+                         "sources": [region_info["country"]["name"]], "url": "https://www.fao.org/faostat/", "nasa": False})
+    if cover is not None:
+        datasets.append({"name": "OpenStreetMap (Nominatim)", "detail": "land cover at the point: building, road, water, farmland",
+                         "sources": [cover["osm"]] if cover.get("osm") else [],
+                         "url": "https://nominatim.openstreetmap.org/", "nasa": False})
     if forecast:
         datasets.append({"name": "Open-Meteo", "detail": "weather forecast", "sources": [],
                          "url": "https://open-meteo.com/", "nasa": False})
@@ -392,6 +421,7 @@ def analyze(
         "soil": {"class": soil_class, "name": agro.CONFIG["soils"][soil_class]["name"],
                  "awc_mm_per_m": agro.CONFIG["soils"][soil_class]["awc_mm_per_m"], "details": soil_info},
         "extra": extra,
+        "suitability": texts.suitability(lang, suit),
         **result,
         "disclaimer": texts.DISCLAIMER[lang],
         "timing_ms": round((time.perf_counter() - started) * 1000),

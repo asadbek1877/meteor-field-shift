@@ -53,6 +53,12 @@ with `ADMIN_TOKEN` set: a map tile layer, or a JSON API that is returned as raw
 | `backend/main.py` | API routes, parallel provider calls, warnings, coverage |
 | `backend/nasa_client.py` | NASA POWER daily and monthly clients |
 | `backend/providers.py` | provider registry, GIBS layers, SoilGrids, Open-Meteo, health checks |
+| `backend/geo.py` | place search (Nominatim, Photon backup; search on submit only, 1 req/s) and OSM land cover at the point |
+| `backend/regional.py` | regional crop plan: FAOSTAT country mix → crops that ripen at this point (local sowing date, frost, season temperature) → generated rotations (typical / local / with a new legume, double cropping) → scored by `agro.Field` |
+| `backend/data/country_crops.json` | FAOSTAT 2020–2024 per country: cropland share, yield, producer price (rebuild: `python -m backend.tools.build_country_crops QCL.zip PP.zip all.csv`) |
+| `backend/data/local_crops.json.gz` | MapSPAM 2020 v2r2 (IFPRI, CC BY 4.0): crop mix per province on a 0.25° grid, 3×3 sub-pixels keep border cells apart (rebuild: `python -m backend.tools.build_local_crops spam2020V2r2_global_harvested_area.csv.zip`) |
+| `backend/data/countries.json` | Natural Earth 1:50m borders for offline "which country" (rebuild: `python -m backend.tools.build_countries ne_50m_admin_0_countries.geojson`) |
+| `backend/suitability.py` | "can crops grow here?": land cover (building, road, water, town...) + NASA POWER climate limits; `unsuitable` skips crop/rotation advice |
 | `backend/store.py` | memory and gzip file cache of NASA responses |
 | `backend/physics.py` | FAO-56 Penman-Monteith and Hargreaves ET0, statistics |
 | `backend/climate.py` | period comparison, trends, 2040 projection, frost season, last 30 days, outlook |

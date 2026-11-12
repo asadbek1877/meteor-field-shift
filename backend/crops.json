@@ -1,5 +1,5 @@
 {
-  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22, with sowing dates typical for Uzbekistan. Heat and frost thresholds, residue classes and revenue_usd_ha (typical yield x price) are placeholders: Mizuki must verify each one and add a source before the demo.",
+  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22. sow_doy is only a fallback: the sowing date is computed for each point from its NASA POWER temperatures (or rain onset in the tropics). Heat, frost and season temperature limits are agronomy rules of thumb. revenue_usd_ha is only a fallback: income uses FAOSTAT yield x producer price of the country (backend/data/country_crops.json). Rice percolation (3 mm/day) approximates paddy losses. Mizuki must verify each value and add a source before the demo.",
   "soils": {
     "light": {
       "awc_mm_per_m": 100,
@@ -96,7 +96,9 @@
         "tmin_c": 0,
         "first_days": 40
       },
-      "revenue_usd_ha": 1800
+      "revenue_usd_ha": 1800,
+      "fao_item": 328,
+      "season_t_min_c": 21
     },
     {
       "id": "winter_wheat",
@@ -136,7 +138,15 @@
         "tmin_c": -20,
         "first_days": 160
       },
-      "revenue_usd_ha": 1100
+      "revenue_usd_ha": 1100,
+      "fao_item": 15,
+      "season_t_min_c": null,
+      "mild_stages": [
+        20,
+        60,
+        70,
+        30
+      ]
     },
     {
       "id": "chickpea",
@@ -176,7 +186,9 @@
         "tmin_c": -8,
         "first_days": 40
       },
-      "revenue_usd_ha": 1050
+      "revenue_usd_ha": 1050,
+      "fao_item": 191,
+      "season_t_min_c": 10
     },
     {
       "id": "sorghum",
@@ -216,7 +228,9 @@
         "tmin_c": 0,
         "first_days": 30
       },
-      "revenue_usd_ha": 800
+      "revenue_usd_ha": 800,
+      "fao_item": 83,
+      "season_t_min_c": 19
     },
     {
       "id": "mung_bean",
@@ -250,7 +264,9 @@
         "limit_days": 10
       },
       "frost": null,
-      "revenue_usd_ha": 1080
+      "revenue_usd_ha": 1080,
+      "fao_item": 211,
+      "season_t_min_c": 20
     },
     {
       "id": "alfalfa",
@@ -287,7 +303,646 @@
         "limit_days": 15
       },
       "frost": null,
-      "revenue_usd_ha": 1200
+      "revenue_usd_ha": 1200,
+      "fao_item": null,
+      "season_t_min_c": 10
+    },
+    {
+      "id": "maize",
+      "name": {
+        "en": "Maize",
+        "uz": "Makkajo'xori"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "high",
+      "sow_doy": 110,
+      "stages": [
+        30,
+        40,
+        50,
+        30
+      ],
+      "kc": [
+        0.3,
+        1.2,
+        0.35
+      ],
+      "root_m": 1.2,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 12
+      },
+      "heat": {
+        "tmax_c": 35,
+        "from_day": 60,
+        "to_day": 90,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 40
+      },
+      "revenue_usd_ha": 1100,
+      "fao_item": 56,
+      "season_t_min_c": 15
+    },
+    {
+      "id": "rice",
+      "name": {
+        "en": "Rice",
+        "uz": "Sholi"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 120,
+      "stages": [
+        30,
+        30,
+        60,
+        30
+      ],
+      "kc": [
+        1.05,
+        1.2,
+        0.75
+      ],
+      "root_m": 0.5,
+      "p": 0.2,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 16
+      },
+      "heat": {
+        "tmax_c": 35,
+        "from_day": 60,
+        "to_day": 95,
+        "limit_days": 7
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 60
+      },
+      "revenue_usd_ha": 1500,
+      "fao_item": 27,
+      "season_t_min_c": 18,
+      "percolation_mm_day": 3.0
+    },
+    {
+      "id": "soybean",
+      "name": {
+        "en": "Soybean",
+        "uz": "Soya"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 130,
+      "stages": [
+        20,
+        30,
+        60,
+        25
+      ],
+      "kc": [
+        0.4,
+        1.15,
+        0.5
+      ],
+      "root_m": 1.0,
+      "p": 0.5,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 15
+      },
+      "heat": {
+        "tmax_c": 35,
+        "from_day": 50,
+        "to_day": 100,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 1000,
+      "fao_item": 236,
+      "season_t_min_c": 15
+    },
+    {
+      "id": "spring_wheat",
+      "name": {
+        "en": "Spring wheat",
+        "uz": "Bahorgi bug'doy"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 100,
+      "stages": [
+        20,
+        25,
+        60,
+        30
+      ],
+      "kc": [
+        0.3,
+        1.15,
+        0.25
+      ],
+      "root_m": 1.2,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 5
+      },
+      "heat": {
+        "tmax_c": 32,
+        "from_day": 55,
+        "to_day": 95,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": -4,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 700,
+      "fao_item": 15,
+      "season_t_min_c": 10
+    },
+    {
+      "id": "barley",
+      "name": {
+        "en": "Barley",
+        "uz": "Arpa"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 95,
+      "stages": [
+        15,
+        25,
+        50,
+        30
+      ],
+      "kc": [
+        0.3,
+        1.15,
+        0.25
+      ],
+      "root_m": 1.0,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 5
+      },
+      "heat": {
+        "tmax_c": 32,
+        "from_day": 45,
+        "to_day": 90,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": -4,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 650,
+      "fao_item": 44,
+      "season_t_min_c": 9
+    },
+    {
+      "id": "potato",
+      "name": {
+        "en": "Potato",
+        "uz": "Kartoshka"
+      },
+      "family": "solanaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "low",
+      "sow_doy": 105,
+      "stages": [
+        25,
+        30,
+        45,
+        30
+      ],
+      "kc": [
+        0.5,
+        1.15,
+        0.75
+      ],
+      "root_m": 0.5,
+      "p": 0.35,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 8
+      },
+      "heat": {
+        "tmax_c": 30,
+        "from_day": 40,
+        "to_day": 100,
+        "limit_days": 25
+      },
+      "frost": {
+        "tmin_c": -1,
+        "first_days": 130
+      },
+      "revenue_usd_ha": 3500,
+      "fao_item": 116,
+      "season_t_min_c": 10
+    },
+    {
+      "id": "sunflower",
+      "name": {
+        "en": "Sunflower",
+        "uz": "Kungaboqar"
+      },
+      "family": "asteraceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 110,
+      "stages": [
+        25,
+        35,
+        45,
+        25
+      ],
+      "kc": [
+        0.35,
+        1.0,
+        0.35
+      ],
+      "root_m": 1.2,
+      "p": 0.45,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 10
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 55,
+        "to_day": 95,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": -2,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 800,
+      "fao_item": 267,
+      "season_t_min_c": 15
+    },
+    {
+      "id": "rapeseed",
+      "name": {
+        "en": "Winter rapeseed",
+        "uz": "Kuzgi raps"
+      },
+      "family": "brassicaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 245,
+      "stages": [
+        35,
+        170,
+        60,
+        35
+      ],
+      "kc": [
+        0.35,
+        1.1,
+        0.35
+      ],
+      "root_m": 1.0,
+      "p": 0.6,
+      "sowing": {
+        "kind": "autumn",
+        "temp_c": 17
+      },
+      "heat": {
+        "tmax_c": 32,
+        "from_day": 240,
+        "to_day": 275,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": -15,
+        "first_days": 200
+      },
+      "revenue_usd_ha": 1000,
+      "fao_item": 270,
+      "season_t_min_c": null,
+      "mild_stages": [
+        25,
+        90,
+        60,
+        35
+      ]
+    },
+    {
+      "id": "groundnut",
+      "name": {
+        "en": "Groundnut",
+        "uz": "Yeryong'oq"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 125,
+      "stages": [
+        25,
+        35,
+        45,
+        25
+      ],
+      "kc": [
+        0.4,
+        1.15,
+        0.6
+      ],
+      "root_m": 0.7,
+      "p": 0.5,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 18
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 40,
+        "to_day": 90,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 1400,
+      "fao_item": 242,
+      "season_t_min_c": 20
+    },
+    {
+      "id": "dry_bean",
+      "name": {
+        "en": "Dry bean",
+        "uz": "Loviya"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 130,
+      "stages": [
+        20,
+        30,
+        40,
+        20
+      ],
+      "kc": [
+        0.4,
+        1.15,
+        0.35
+      ],
+      "root_m": 0.8,
+      "p": 0.45,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 14
+      },
+      "heat": {
+        "tmax_c": 32,
+        "from_day": 40,
+        "to_day": 75,
+        "limit_days": 8
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 1100,
+      "fao_item": 176,
+      "season_t_min_c": 16
+    },
+    {
+      "id": "lentil",
+      "name": {
+        "en": "Lentil",
+        "uz": "Yasmiq"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 80,
+      "stages": [
+        20,
+        30,
+        60,
+        40
+      ],
+      "kc": [
+        0.4,
+        1.1,
+        0.3
+      ],
+      "root_m": 0.8,
+      "p": 0.5,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 6
+      },
+      "heat": {
+        "tmax_c": 32,
+        "from_day": 70,
+        "to_day": 110,
+        "limit_days": 8
+      },
+      "frost": {
+        "tmin_c": -6,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 900,
+      "fao_item": 201,
+      "season_t_min_c": 10
+    },
+    {
+      "id": "sugar_beet",
+      "name": {
+        "en": "Sugar beet",
+        "uz": "Qand lavlagi"
+      },
+      "family": "amaranthaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 100,
+      "stages": [
+        30,
+        45,
+        90,
+        45
+      ],
+      "kc": [
+        0.35,
+        1.2,
+        0.7
+      ],
+      "root_m": 1.0,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 7
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 80,
+        "to_day": 170,
+        "limit_days": 20
+      },
+      "frost": {
+        "tmin_c": -2,
+        "first_days": 40
+      },
+      "revenue_usd_ha": 2200,
+      "fao_item": 157,
+      "season_t_min_c": 10
+    },
+    {
+      "id": "millet",
+      "name": {
+        "en": "Millet",
+        "uz": "Tariq"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "high",
+      "sow_doy": 140,
+      "stages": [
+        15,
+        25,
+        40,
+        25
+      ],
+      "kc": [
+        0.3,
+        1.0,
+        0.3
+      ],
+      "root_m": 1.5,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 16
+      },
+      "heat": {
+        "tmax_c": 42,
+        "from_day": 40,
+        "to_day": 70,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 500,
+      "fao_item": 79,
+      "season_t_min_c": 20
+    },
+    {
+      "id": "tomato",
+      "name": {
+        "en": "Tomato",
+        "uz": "Pomidor"
+      },
+      "family": "solanaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "low",
+      "sow_doy": 120,
+      "stages": [
+        30,
+        40,
+        45,
+        30
+      ],
+      "kc": [
+        0.6,
+        1.15,
+        0.8
+      ],
+      "root_m": 1.0,
+      "p": 0.4,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 15
+      },
+      "heat": {
+        "tmax_c": 35,
+        "from_day": 50,
+        "to_day": 110,
+        "limit_days": 15
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 145
+      },
+      "revenue_usd_ha": 6000,
+      "fao_item": 388,
+      "season_t_min_c": 17
+    },
+    {
+      "id": "onion",
+      "name": {
+        "en": "Onion",
+        "uz": "Piyoz"
+      },
+      "family": "amaryllidaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "low",
+      "sow_doy": 90,
+      "stages": [
+        15,
+        25,
+        70,
+        40
+      ],
+      "kc": [
+        0.7,
+        1.05,
+        0.75
+      ],
+      "root_m": 0.4,
+      "p": 0.3,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 8
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 60,
+        "to_day": 130,
+        "limit_days": 20
+      },
+      "frost": {
+        "tmin_c": -3,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 4000,
+      "fao_item": 403,
+      "season_t_min_c": 12
     }
   ]
 }

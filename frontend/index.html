@@ -43,24 +43,24 @@
         <div id="map-workspace" class="map-workspace">
           <div id="map" class="map" role="application" data-t-aria="map_label"></div>
           <div id="map-tools" class="map-tools">
-            <div class="field-search">
-              <label class="field" for="place-search">
-                <span data-t="place_search_label"></span>
-                <input id="place-search" type="search" autocomplete="off" data-t-placeholder="place_search_placeholder"
+            <form class="field-search" id="place-form" role="search" autocomplete="off">
+              <label class="field" for="place-search"><span data-t="place_search_label"></span></label>
+              <div class="search-row">
+                <input id="place-search" type="search" enterkeyhint="search" data-t-placeholder="place_search_placeholder"
                   aria-autocomplete="list" aria-controls="place-results" aria-expanded="false">
-              </label>
+                <button type="submit" id="place-go" class="btn primary" data-t="place_search_button"></button>
+              </div>
               <p class="hint" data-t="place_search_hint"></p>
               <ul id="place-results" class="place-results" role="listbox" data-t-aria="place_results_label" hidden></ul>
               <p id="place-search-status" class="hint" role="status" aria-live="polite" aria-atomic="true"></p>
               <p id="place-info" class="hint place-info" aria-live="polite"></p>
-              <a class="search-attribution" href="https://photon.komoot.io/" target="_blank" rel="noopener" data-t="place_search_attribution"></a>
-            </div>
+              <a class="search-attribution" href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener" data-t="place_search_attribution"></a>
+            </form>
             <div class="row wrap">
               <button type="button" id="locate" class="btn primary" data-t="locate"></button>
               <span id="coords" class="mono muted"></span>
             </div>
             <p id="locate-msg" class="hint warn-text" hidden></p>
-            <div id="presets" class="row wrap"></div>
             <label class="field"><span data-t="map_layer"></span><select id="layer"></select></label>
             <label class="field" id="opacity-row" hidden>
               <span data-t="layer_opacity"></span>
@@ -92,6 +92,7 @@
       </section>
     </aside>
     <section class="content">
+      <section id="suit-card" class="card suit" aria-live="polite" hidden></section>
       <section class="card verdict" aria-labelledby="verdict">
         <div class="eyebrow" data-t="verdict_eyebrow"></div>
         <h1 id="verdict" data-t="loading"></h1>
@@ -99,6 +100,7 @@
         <ul id="advice-top" class="advice"></ul>
         <a class="btn primary" href="/rotations.html" data-t="full_comparison"></a>
       </section>
+      <section id="region-card" class="card region" aria-labelledby="region-title" hidden></section>
     </section>
   </main>
 

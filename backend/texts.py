@@ -8,7 +8,7 @@ LANGS = ("en", "uz")
 WARN = {
     "en": {
         "disabled": "{name} is switched off. Analysis that needs it was skipped.",
-        "power_failed": "NASA POWER did not respond and there is no saved data near this point. Climate, crop and rotation analysis was skipped. Try a preset location.",
+        "power_failed": "NASA POWER did not respond and there is no saved data near this point. Climate, crop and rotation analysis was skipped. Try a point nearby or try again in a moment.",
         "power_fallback": "NASA POWER did not respond. Showing saved data of a point {km} km away. Numbers do not exactly match this place.",
         "power_monthly": "NASA POWER daily data did not arrive, so monthly data is used. Heat days, frost dates and dry spells are approximate or missing.",
         "not_land": "This point looks like open water or ice: NASA has no soil data here. The crop results below have no practical meaning.",
@@ -20,7 +20,7 @@ WARN = {
     },
     "uz": {
         "disabled": "{name} o'chirilgan. Unga tayanadigan tahlil o'tkazib yuborildi.",
-        "power_failed": "NASA POWER javob bermadi va bu joy yaqinida saqlangan ma'lumot yo'q. Iqlim, ekin va rotatsiya tahlili o'tkazib yuborildi. Tayyor joylardan birini tanlang.",
+        "power_failed": "NASA POWER javob bermadi va bu joy yaqinida saqlangan ma'lumot yo'q. Iqlim, ekin va rotatsiya tahlili o'tkazib yuborildi. Yaqin atrofdagi boshqa nuqtani tanlang yoki birozdan keyin urinib ko'ring.",
         "power_fallback": "NASA POWER javob bermadi. {km} km uzoqlikdagi saqlangan nuqta ma'lumoti ko'rsatilmoqda. Raqamlar aynan shu joyga mos emas.",
         "power_monthly": "NASA POWER kunlik ma'lumoti kelmadi, shuning uchun oylik ma'lumot ishlatildi. Issiq kunlar, sovuq sanalari va qurg'oqchil davrlar taxminiy yoki yo'q.",
         "not_land": "Bu nuqta suv yoki muzlikka o'xshaydi: NASA'da bu yer uchun tuproq ma'lumoti yo'q. Quyidagi ekin natijalari amaliy ma'noga ega emas.",
@@ -201,3 +201,232 @@ def advice(lang: str, climate: dict, crops: list, rotations: dict, now: dict) ->
         if w["net_mm"] >= 1:
             add("now", "tip", t["week"].format(crop=name(w), mm=w["net_mm"], m3=w["m3_ha"]))
     return out
+
+
+# ---------- can crops grow here at all? ----------
+
+SUIT = {
+    "en": {
+        "head_unsuitable": "Crops cannot be grown here",
+        "head_limited": "Farming here is possible only with limits",
+        "head_ok": "This point can be farmed",
+        "sub_unsuitable": "This point is not available as a field, so crop and rotation advice was skipped.",
+        "sub_limited": "Read the limits below before trusting the crop and rotation numbers.",
+        "sub_ok": "No building, road, water or ice was found here, and the climate allows a growing season.",
+        "todo_unsuitable": "What to do: click open land nearby (a field or orchard) or search for a farming district.",
+        "land_unknown": "OpenStreetMap did not answer, so land cover was not checked; only the climate was judged.",
+        "building": ("There is a building here{name}",
+                     "A house or other building covers the ground, so there is no open soil for roots, rain or sunlight. Fields must be open land."),
+        "road": ("This is a road or asphalt{name}",
+                 "Asphalt and concrete seal the ground: water and air do not reach the soil, and nothing can be planted on a road."),
+        "transport": ("This is a railway or airfield{name}",
+                      "Transport land is paved or packed hard and is not allowed for farming."),
+        "urban": ("This is built-up land (town, industry, cemetery){name}",
+                  "The land is set aside for housing, industry or other non-farm use, and most of the soil is covered. Field analysis makes sense only for farmland."),
+        "park": ("This is a park or sports ground{name}",
+                 "It is public green or sports space, not farmland, so crops are not planted here."),
+        "water": ("This is a lake, river or reservoir{name}",
+                  "The ground is under water. Roots cannot breathe under water, so field crops cannot grow. Choose a field on the shore."),
+        "sea": ("This is open sea or ocean",
+                "There is no land at this point: no soil, no address, and NASA POWER reports no soil wetness here. Crops need land."),
+        "no_soil": ("No land soil here: water or ice sheet",
+                    "NASA POWER has no root-zone soil wetness for this point, which happens over open water and ice sheets. Crops need soil."),
+        "glacier": ("This is a glacier{name}",
+                    "The ground is covered by permanent ice: there is no soil and no warm season."),
+        "rock": ("This is bare rock or scree{name}",
+                 "There is no soil layer to hold roots and water."),
+        "sand": ("This is loose sand or dunes{name}",
+                 "Moving sand holds almost no water or nutrients and buries seedlings."),
+        "wetland": ("This is a wetland or marsh{name}",
+                    "The soil is waterlogged most of the year: roots of most field crops rot (rice is the exception). Draining wetlands also harms nature."),
+        "forest": ("This is forest{name}",
+                   "Farming would need the trees cut down, which is not recommended; the numbers below assume open land."),
+        "too_cold": ("Too cold: no growing season",
+                     "Even the warmest month averages only {t} °C (NASA POWER, 2011-2025). Crops need months warmer than 10 °C to grow; here there are none (tundra or ice climate)."),
+        "short_season": ("Cold climate with a very short season",
+                         "Only {n} month(s) a year average 10 °C or more (warmest {t} °C). Only fast, cold-hardy crops (barley, potato, cabbage) or greenhouses can work; cotton and other warm crops will not ripen."),
+        "hyper_arid": ("Hyper-arid desert",
+                       "Rain is {rain} mm a year while the air can evaporate {et0} mm (aridity {ai}, below 0.05). Rain-fed farming is impossible; every crop needs full irrigation from a reliable water source."),
+        "extreme_heat": ("Extreme heat",
+                         "In the hottest month the average daily maximum is {t} °C. Above about 45 °C most crops cannot flower; sow in the cooler months only."),
+        "farmland": ("OpenStreetMap marks this as farmland{name}", "The land is already used for crops, gardens or pasture ({osm})."),
+        "facts": "Average temperature {t} °C (warmest: {wm}, {tw} °C; coldest: {cm}, {tc} °C) · rain {rain} mm/year · elevation {elev} m · {n} month(s) at 10 °C or warmer",
+    },
+    "uz": {
+        "head_unsuitable": "Bu yerda ekin ekib bo'lmaydi",
+        "head_limited": "Bu yerda dehqonchilik faqat cheklov bilan mumkin",
+        "head_ok": "Bu nuqtada ekin ekish mumkin",
+        "sub_unsuitable": "Bu nuqta dala sifatida mavjud emas, shuning uchun ekin va rotatsiya tavsiyasi berilmadi.",
+        "sub_limited": "Ekin va rotatsiya raqamlariga ishonishdan oldin quyidagi cheklovlarni o'qing.",
+        "sub_ok": "Bu yerda bino, yo'l, suv yoki muz topilmadi, iqlim esa o'sish mavsumiga imkon beradi.",
+        "todo_unsuitable": "Nima qilish kerak: yaqin atrofdagi ochiq yerni (dala yoki bog') bosing yoki qishloq xo'jaligi tumanini qidiring.",
+        "land_unknown": "OpenStreetMap javob bermadi, shuning uchun yer qoplami tekshirilmadi; faqat iqlim baholandi.",
+        "building": ("Bu yerda bino turibdi{name}",
+                     "Uy yoki boshqa inshoot yerni yopib turibdi: ildiz, yomg'ir va quyosh uchun ochiq tuproq yo'q. Dala ochiq yer bo'lishi kerak."),
+        "road": ("Bu yo'l yoki asfalt{name}",
+                 "Asfalt va beton yerni yopadi: suv va havo tuproqqa yetib bormaydi, yo'l ustiga hech narsa ekib bo'lmaydi."),
+        "transport": ("Bu temir yo'l yoki aerodrom{name}",
+                      "Transport yerlari qoplangan yoki zichlangan, dehqonchilik uchun ruxsat etilmaydi."),
+        "urban": ("Bu qurilgan hudud (shahar, sanoat, qabriston){name}",
+                  "Yer turar-joy, sanoat yoki boshqa qishloq xo'jaligidan tashqari maqsad uchun ajratilgan, tuprog'i asosan yopilgan. Dala tahlili faqat qishloq xo'jaligi yerlari uchun ma'noli."),
+        "park": ("Bu park yoki sport maydoni{name}",
+                 "Bu jamoat yashil yoki sport hududi, qishloq xo'jaligi yeri emas, bu yerga ekin ekilmaydi."),
+        "water": ("Bu ko'l, daryo yoki suv ombori{name}",
+                  "Yer suv ostida. Suv ostida ildiz nafas ololmaydi, shuning uchun dala ekinlari o'smaydi. Qirg'oqdagi dalani tanlang."),
+        "sea": ("Bu ochiq dengiz yoki okean",
+                "Bu nuqtada quruqlik yo'q: tuproq ham, manzil ham yo'q, NASA POWER bu yer uchun tuproq namligini bermaydi. Ekin uchun quruqlik kerak."),
+        "no_soil": ("Bu yerda quruqlik tuprog'i yo'q: suv yoki muz qatlami",
+                    "NASA POWER bu nuqta uchun ildiz qatlami namligini bermaydi, bu ochiq suv va muz qatlamlari ustida bo'ladi. Ekin uchun tuproq kerak."),
+        "glacier": ("Bu muzlik{name}",
+                    "Yer doimiy muz bilan qoplangan: tuproq ham, issiq mavsum ham yo'q."),
+        "rock": ("Bu ochiq tosh yoki tosh uyumi{name}",
+                 "Ildiz va suvni ushlab turadigan tuproq qatlami yo'q."),
+        "sand": ("Bu ko'chma qum yoki barxan{name}",
+                 "Ko'chma qum deyarli suv va oziq ushlamaydi, nihollarni ko'mib yuboradi."),
+        "wetland": ("Bu botqoqlik{name}",
+                    "Tuproq yil bo'yi suvga to'yingan: ko'pchilik dala ekinlarining ildizi chiriydi (sholi bundan mustasno). Botqoqni quritish tabiatga ham zarar."),
+        "forest": ("Bu o'rmon{name}",
+                   "Dehqonchilik uchun daraxtlarni kesish kerak bo'ladi, bu tavsiya etilmaydi; quyidagi raqamlar ochiq yer uchun hisoblangan."),
+        "too_cold": ("Juda sovuq: o'sish mavsumi yo'q",
+                     "Eng issiq oyning o'rtacha harorati ham atigi {t} °C (NASA POWER, 2011-2025). Ekinlar o'sishi uchun 10 °C dan issiq oylar kerak; bu yerda bunday oy yo'q (tundra yoki muz iqlimi)."),
+        "short_season": ("Sovuq iqlim, mavsum juda qisqa",
+                         "Yilda atigi {n} oy o'rtacha 10 °C va undan issiq (eng issiq oy {t} °C). Faqat tez pishadigan, sovuqqa chidamli ekinlar (arpa, kartoshka, karam) yoki issiqxona mumkin; paxta kabi issiqsevar ekinlar pishmaydi."),
+        "hyper_arid": ("O'ta qurg'oqchil cho'l",
+                       "Yog'in yiliga {rain} mm, havo esa {et0} mm suvni bug'lata oladi (qurg'oqchilik indeksi {ai}, 0.05 dan past). Lalmi dehqonchilik mumkin emas; har bir ekin ishonchli manbadan to'liq sug'orishni talab qiladi."),
+        "extreme_heat": ("Haddan tashqari issiq",
+                         "Eng issiq oyda kunduzgi o'rtacha maksimum {t} °C. Taxminan 45 °C dan yuqorida ko'pchilik ekinlar gullay olmaydi; faqat salqin oylarda eking."),
+        "farmland": ("OpenStreetMap bu yerni qishloq xo'jaligi yeri deb belgilagan{name}", "Yer allaqachon ekin, bog' yoki yaylov uchun ishlatiladi ({osm})."),
+        "facts": "O'rtacha harorat {t} °C (eng issiq: {wm}, {tw} °C; eng sovuq: {cm}, {tc} °C) · yog'in {rain} mm/yil · balandlik {elev} m · {n} oy 10 °C va undan issiq",
+    },
+}
+
+
+def suitability(lang: str, s: dict) -> dict:
+    """Adds readable texts to a suitability.judge() result."""
+    from .suitability import month_name
+
+    t = SUIT[lang]
+    items = []
+    for r in s["reasons"]:
+        title, detail = t[r["code"]]
+        nm = f" ({r['name']})" if r.get("name") else ""
+        fmt = {k: v for k, v in r.items() if k not in ("code", "level", "name")}
+        items.append({"code": r["code"], "level": r["level"],
+                      "title": title.format(name=nm), "detail": detail.format(**fmt)})
+    c = s["climate"]
+    facts = t["facts"].format(
+        t=c["t_mean_c"], wm=month_name(c["warmest_month"], lang), tw=c["warmest_t_c"],
+        cm=month_name(c["coldest_month"], lang), tc=c["coldest_t_c"], rain=int(c["rain_mm"]),
+        elev=int(c["elevation_m"] or 0), n=c["growing_months"]) if c else None
+    return {
+        **s,
+        "headline": t["head_" + s["status"]],
+        "summary": t["sub_" + s["status"]],
+        "todo": t["todo_unsuitable"] if s["status"] == "unsuitable" else None,
+        "note": None if s["land"]["checked"] else t["land_unknown"],
+        "facts": facts,
+        "items": items,
+    }
+
+
+# ---------- what this region grows ----------
+
+REGION = {
+    "en": {
+        "title": "Region: {country} — what is grown",
+        "title_local": "{region}, {country} — what farmers grow here",
+        "source_local": "Share of the cropland within about 75 km of the point (same province), MapSPAM 2020 (IFPRI). Income = national yield × producer price (FAOSTAT).",
+        "title_unknown": "Crops for this point",
+        "source": "Share of the country's harvested cropland, FAOSTAT {y0}–{y1}. Income = national yield × producer price.",
+        "unknown": "The country of this point is not known (OpenStreetMap did not answer), so the world's most common crops were checked against the climate here.",
+        "summary": "Of the main crops of {country}, {n} can be grown at this point; the rotations below are built only from them.",
+        "summary_none": "None of the main crops of {country} ripen reliably at this point, so no rotation could be built.",
+        "suggested": "Not common in {country}, added for soil health (a legume fixes nitrogen): {crops}.",
+        "here_yes": "grows here", "here_no": "not here", "here_na": "not modelled",
+        "reasons": {
+            "frost": "frost after sowing in most years",
+            "season_too_cold": "the season is too cold for it to ripen",
+            "too_warm_for_winter": "winters are too warm for a winter crop",
+            "no_data": "not enough weather data",
+        },
+        "origin": {"typical": "typical here", "local": "local crops", "suggested": "with a new crop",
+                   "reference": "reviewed reference"},
+        "src": {"country": "country data", "subregion": "regional average", "world": "world average",
+                "default": "app default"},
+    },
+    "uz": {
+        "title": "Hudud: {country} — nima ekiladi",
+        "title_local": "{region}, {country} — fermerlar bu yerda nima ekadi",
+        "source_local": "Nuqta atrofidagi taxminan 75 km (shu viloyat ichida) ekin maydoni ulushi, MapSPAM 2020 (IFPRI). Daromad = milliy hosildorlik × sotish narxi (FAOSTAT).",
+        "title_unknown": "Bu nuqta uchun ekinlar",
+        "source": "Davlatdagi yig'ib olingan ekin maydonidagi ulush, FAOSTAT {y0}–{y1}. Daromad = milliy hosildorlik × sotish narxi.",
+        "unknown": "Bu nuqtaning davlati aniqlanmadi (OpenStreetMap javob bermadi), shuning uchun dunyoda eng ko'p ekiladigan ekinlar shu joy iqlimi bilan tekshirildi.",
+        "summary": "{country}: asosiy ekinlardan {n} tasi shu nuqtada o'sadi; quyidagi rotatsiyalar faqat ulardan tuzildi.",
+        "summary_none": "{country}: asosiy ekinlardan hech biri shu nuqtada ishonchli pishmaydi, shuning uchun rotatsiya tuzib bo'lmadi.",
+        "suggested": "{country} bo'yicha keng tarqalmagan, tuproq salomatligi uchun qo'shildi (dukkakli ekin azot to'playdi): {crops}.",
+        "here_yes": "bu yerda o'sadi", "here_no": "bu yerda o'smaydi", "here_na": "modellashtirilmagan",
+        "reasons": {
+            "frost": "ko'p yillarda ekishdan keyin sovuq uradi",
+            "season_too_cold": "mavsum pishishi uchun juda sovuq",
+            "too_warm_for_winter": "kuzgi ekin uchun qish juda iliq",
+            "no_data": "ob-havo ma'lumoti yetarli emas",
+        },
+        "origin": {"typical": "bu yerda odatiy", "local": "mahalliy ekinlar", "suggested": "yangi ekin bilan",
+                   "reference": "tekshirilgan namuna"},
+        "src": {"country": "davlat ma'lumoti", "subregion": "mintaqa o'rtachasi", "world": "dunyo o'rtachasi",
+                "default": "ilova qiymati"},
+    },
+}
+
+# FAOSTAT names of common crops that the app does not simulate, for the Uzbek list
+FAO_UZ = {
+    "Apples": "Olma", "Grapes": "Uzum", "Sugar cane": "Shakarqamish", "Coffee, green": "Qahva",
+    "Cassava, fresh": "Kassava", "Yams": "Yams", "Oil palm fruit": "Moyli palma", "Oats": "Suli", "Rye": "Javdar",
+    "Triticale": "Tritikale", "Linseed": "Zig'ir", "Safflower seed": "Maxsar", "Buckwheat": "Grechka",
+    "Cow peas, dry": "Sigir no'xati", "Peas, dry": "Quruq no'xat", "Lupins": "Lyupin", "Olives": "Zaytun",
+    "Cocoa beans": "Kakao", "Coconuts, in shell": "Kokos", "Bananas": "Banan", "Sweet potatoes": "Batat",
+    "Other vegetables, fresh n.e.c.": "Boshqa sabzavotlar", "Other fruits, n.e.c.": "Boshqa mevalar",
+    "Watermelons": "Tarvuz", "Cabbages": "Karam", "Carrots and turnips": "Sabzi va sholg'om",
+    "Apricots": "O'rik", "Cherries": "Gilos", "Walnuts, in shell": "Yong'oq", "Almonds, in shell": "Bodom",
+    "Tea leaves": "Choy", "Natural rubber in primary forms": "Kauchuk", "Sesame seed": "Kunjut",
+}
+
+
+def region(lang: str, p: dict) -> dict:
+    from .agro import CROPS
+
+    t = REGION[lang]
+    nm = lambda cid: CROPS[cid]["name"][lang]  # noqa: E731
+    c, loc = p["country"], p.get("local")
+    cname = c["name"] if c else (loc["country"] if loc else None)
+    place = loc["region"] if loc else cname
+    top = []
+    for row in p["top"]:
+        if row["crop_id"]:
+            label = nm(row["crop_id"])
+        elif row.get("label"):  # MapSPAM crop the app does not simulate
+            label = row["label"][lang]
+        else:  # FAOSTAT item the app does not simulate
+            label = FAO_UZ.get(row["name_en"], row["name_en"]) if lang == "uz" else row["name_en"]
+        here = {"yes": "here_yes", "no": "here_no", None: "here_na"}[row["here"]]
+        top.append({"name": label, "share": row["share"], "crop_id": row["crop_id"], "here": row["here"],
+                    "here_text": t[here], "reason": t["reasons"].get(row["reason"]) if row["reason"] else None})
+    grown_main = [r for r in p["top"] if r["here"] == "yes"]
+    if c or loc:
+        summary = t["summary"].format(country=place, n=len(grown_main)) if p["grown_here"] else t["summary_none"].format(country=place)
+    else:
+        summary = t["unknown"]
+    econ = {cid: {**v, "source_text": t["src"][v["source"]], "name": nm(cid)} for cid, v in p["economics"].items()}
+    return {
+        **p,
+        "title": t["title_local"].format(region=loc["region"], country=cname) if loc
+        else t["title"].format(country=cname) if c else t["title_unknown"],
+        "source_text": t["source_local"] if loc
+        else t["source"].format(y0=c["years"][0], y1=c["years"][1]) if c else None,
+        "summary": summary,
+        "suggested_text": t["suggested"].format(country=place or "", crops=", ".join(nm(x) for x in p["suggested"])) if p["suggested"] and (c or loc) else None,
+        "top": top,
+        "not_here": [{"id": x["id"], "name": nm(x["id"]), "reason": t["reasons"].get(x["reason"], x["reason"])} for x in p["not_here"]],
+        "economics": econ,
+        "origin_text": t["origin"],
+    }

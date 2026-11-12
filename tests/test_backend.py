@@ -8,7 +8,7 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from backend import agro, climate, nasa_client, physics, providers, store, texts
+from backend import agro, climate, geo, nasa_client, physics, providers, regional, store, suitability, texts
 from backend.main import app
 
 START = date(1991, 1, 1)
@@ -111,7 +111,7 @@ def test_warming_raises_water_need():
     warm = agro.Field(climate.prepare(fake_data(warming=0.08))).crops()
     need = lambda rows: next(c for c in rows if c["id"] == "cotton")["recent"]["water_need_mm"]
     assert need(warm) > need(cool)
-    assert len(cool) == 6
+    assert len(cool) == len(agro.CROPS)
 
 
 def test_rotations_ranking_follows_priorities():
@@ -137,7 +137,8 @@ def test_soil_index_and_custom_rotation():
     with pytest.raises(ValueError):
         agro.parse_custom("cotton|banana")
     assert agro.conflicts([["cotton"], ["winter_wheat", "mung_bean"]]) == []
-    assert agro.conflicts([["chickpea", "sorghum"]])[0]["overlap_days"] > 0
+    assert agro.conflicts([["chickpea", "sorghum"]]) == []  # sorghum is sown after the chickpea harvest
+    assert agro.conflicts([["cotton", "winter_wheat"]])[0]["overlap_days"] > 0  # wheat then runs into next cotton
 
 
 def _advice_inputs():
@@ -175,6 +176,9 @@ def client(monkeypatch, tmp_path):
     def provider_down(*args, **kwargs):
         raise providers.ProviderDown("ConnectTimeout")
 
+    def geo_down(*args, **kwargs):
+        raise geo.GeoDown("Nominatim: ConnectTimeout")
+
     monkeypatch.setattr(nasa_client, "fetch_daily", down)
     monkeypatch.setattr(nasa_client, "fetch_monthly", down)
     monkeypatch.setattr(store, "_memory", {"41.3_69.2": fake_data()})
@@ -182,13 +186,15 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setattr(providers, "check", lambda p, force=False: {"status": "ok", "ms": 5, "message": None})
     monkeypatch.setattr(providers, "soil", provider_down)
     monkeypatch.setattr(providers, "forecast", provider_down)
+    monkeypatch.setattr(geo, "land_cover", geo_down)
     return TestClient(app)
 
 
 def test_full_analysis_from_cache(client):
     body = client.get("/api/analyze?lat=41.3&lon=69.2&lang=uz").json()
     assert body["source"] == "cache" and body["coverage"]["rotations"] == "full"
-    assert body["rotations"]["best_id"] and len(body["crops"]) == 6 and body["advice"]
+    assert body["rotations"]["best_id"] and body["crops"] and body["advice"]
+    assert body["region"]["country"]["iso"] == "UZ"  # OSM is down: the offline borders still find the country
     assert body["coverage"]["soil"] == "default" and body["soil"]["class"] == "medium"
     assert body["coverage"]["forecast"] == "climatology" and body["now"]["week_basis"]["source"] == "climatology"
     assert {w["provider"] for w in body["warnings"]} == {"soilgrids", "open_meteo"}
@@ -223,6 +229,7 @@ def test_degrades_step_by_step(client, monkeypatch):
 
     # daily data fails, monthly data arrives: analysis still runs, marked approximate
     monthly = fake_data(lat=-10.0, lon=-50.0)
+    monthly["params"] = {k: v[182:] + v[:182] for k, v in monthly["params"].items()}  # southern seasons
     monthly["resolution"] = "monthly"
     monkeypatch.setattr(nasa_client, "fetch_monthly", lambda lat, lon: monthly)
     body = client.get("/api/analyze?lat=-10&lon=-50").json()
@@ -251,14 +258,14 @@ def test_layer_provider_down_is_reported(client, monkeypatch):
 
 
 def test_custom_rotation_and_validation(client):
-    body = client.get("/api/analyze?lat=41.3&lon=69.2&custom=chickpea%2Bsorghum").json()
+    body = client.get("/api/analyze?lat=41.3&lon=69.2&custom=cotton%2Bwinter_wheat").json()
     assert body["rotations"]["current_id"] == "custom"
     assert any(w["provider"] == "rotation" for w in body["warnings"])  # overlapping seasons are reported
     assert body["rotations"]["best_id"] != "custom"
     assert client.get("/api/analyze?lat=41.3&lon=69.2&custom=banana").status_code == 422
     assert client.get("/api/analyze?lat=91&lon=0").status_code == 422
     assert client.get("/api/analyze?lat=41.3&lon=69.2&w_water=0&w_income=0&w_soil=0&w_risk=0").status_code == 200
-    assert len(client.get("/api/options").json()["crops"]) == 6
+    assert len(client.get("/api/options").json()["crops"]) == len(agro.CROPS)
 
 
 def test_provider_editing_needs_token_and_validates(client, monkeypatch):
@@ -281,3 +288,162 @@ def test_provider_editing_needs_token_and_validates(client, monkeypatch):
     assert off["source"] == "disabled" and off["climate"] is None
     assert client.delete("/api/providers/nasa_power", headers=ok).status_code == 422
     assert client.delete("/api/providers/my_tiles", headers=ok).status_code == 200
+
+
+# ---------- can crops grow here? ----------
+
+SQUARE = {"type": "Polygon", "coordinates": [[[69.19, 41.29], [69.21, 41.29], [69.21, 41.31], [69.19, 41.31], [69.19, 41.29]]]}
+
+
+def test_point_in_area_and_distance_to_road():
+    assert geo.where(SQUARE, 41.30, 69.20) == (True, 0.0)
+    inside, dist = geo.where(SQUARE, 41.40, 69.20)  # 10 km north of the square
+    assert inside is False and 9_000 < dist < 11_000
+    road = {"type": "LineString", "coordinates": [[69.20, 41.30], [69.21, 41.30]]}
+    inside, dist = geo.where(road, 41.30005, 69.205)  # about 5.5 m north of the road
+    assert inside is None and 4 < dist < 7
+
+
+@pytest.mark.parametrize("cover, status, code", [
+    ({"kind": "building", "osm": "building=yes", "name": None, "found": True}, "unsuitable", "building"),
+    ({"kind": "road", "osm": "highway=primary", "name": "Amir Temur", "found": True}, "unsuitable", "road"),
+    ({"kind": "water", "osm": "natural=water", "name": "Lake", "found": True}, "unsuitable", "water"),
+    ({"kind": "farmland", "osm": "landuse=farmland", "name": None, "found": True}, "ok", "farmland"),
+    ({"kind": None, "osm": None, "name": None, "found": True}, "ok", None),
+])
+def test_land_cover_decides(cover, status, code):
+    s = suitability.judge(cover, None, False)
+    assert s["status"] == status
+    assert (s["reasons"][0]["code"] if s["reasons"] else None) == code
+
+
+def test_open_sea_and_climate_limits():
+    sea = suitability.judge({"kind": None, "found": False}, None, no_soil=True)
+    assert sea["status"] == "unsuitable" and sea["reasons"][0]["code"] == "sea"
+    facts = suitability.climate_facts(climate.prepare(fake_data()))
+    assert facts["growing_months"] >= 6 and facts["warmest_month"] == 7
+    assert suitability.judge(None, facts, False)["status"] == "ok"
+    cold = {**facts, "growing_months": 0, "warmest_t_c": 4.0}
+    assert suitability.judge(None, cold, False)["reasons"][0]["code"] == "too_cold"
+    desert = {**facts, "aridity": 0.02}
+    assert suitability.judge(None, desert, False)["status"] == "limited"
+    for lang in texts.LANGS:  # every reason has a text in every language
+        for code in ["building", "road", "transport", "urban", "park", "water", "sea", "no_soil", "glacier",
+                     "rock", "sand", "wetland", "forest", "too_cold", "short_season", "hyper_arid", "extreme_heat", "farmland"]:
+            assert code in texts.SUIT[lang]
+        assert texts.suitability(lang, suitability.judge(None, cold, False))["headline"] == texts.SUIT[lang]["head_unsuitable"]
+
+
+def test_building_skips_crop_advice_but_keeps_climate(client, monkeypatch):
+    monkeypatch.setattr(geo, "land_cover", lambda lat, lon, lang: {
+        "kind": "building", "osm": "building=yes", "name": "School 5", "place": "Tashkent", "country_code": "uz", "found": True})
+    body = client.get("/api/analyze?lat=41.3&lon=69.2&lang=uz").json()
+    s = body["suitability"]
+    assert s["status"] == "unsuitable" and s["headline"] == "Bu yerda ekin ekib bo'lmaydi"
+    assert "School 5" in s["items"][0]["title"] and s["todo"] and s["facts"]
+    assert body["rotations"] is None and body["crops"] is None
+    assert body["climate"] is not None and all(a["group"] == "climate" for a in body["advice"])
+
+
+def test_land_cover_down_still_analyses(client):
+    body = client.get("/api/analyze?lat=41.3&lon=69.2").json()
+    assert body["suitability"]["status"] == "ok" and body["suitability"]["note"]
+    assert body["rotations"]["best_id"]
+
+
+def test_place_search(client, monkeypatch):
+    monkeypatch.setattr(geo, "search", lambda q, lang, limit: [{"name": "Uzbekistan", "lat": 41.3, "lon": 63.9,
+                                                                 "bbox": [37.2, 56.0, 45.6, 73.2], "outline": None}])
+    assert client.get("/api/places?q=Uzbekistan").json()["results"][0]["bbox"][0] == 37.2
+
+    def down(*a, **k):
+        raise geo.GeoDown("x")
+    monkeypatch.setattr(geo, "search", down)
+    assert client.get("/api/places?q=Uzbekistan").status_code == 502
+
+
+def test_nearest_object_counts_only_when_the_point_is_on_it(monkeypatch):
+    house = {"type": "Polygon", "coordinates": [[[69.2000, 41.3000], [69.2001, 41.3000], [69.2001, 41.3001], [69.2000, 41.3001], [69.2000, 41.3000]]]}
+    town = {"city": "Tashkent", "neighbourhood": "Chilanzar", "country_code": "uz"}
+    village = {"village": "Qishloq", "country_code": "uz"}
+
+    def answer(address):
+        monkeypatch.setattr(geo, "_cover_cache", {})
+        monkeypatch.setattr(geo, "_nominatim", lambda path, params: {
+            "category": "building", "type": "yes", "geojson": house, "address": address, "display_name": "x"})
+
+    answer(town)
+    assert geo.land_cover(41.30005, 69.20005)["kind"] == "building"   # inside the house
+    assert geo.land_cover(41.30014, 69.20005)["kind"] == "building"   # 4 m off its wall
+    assert geo.land_cover(41.30040, 69.20005)["kind"] == "urban"      # 33 m away, in a town
+    answer(village)
+    assert geo.land_cover(41.30040, 69.20005)["kind"] is None         # 33 m away, village fields
+    assert geo.land_cover(41.30200, 69.20005)["kind"] is None
+
+
+# ---------- regional crop plan ----------
+
+def test_country_profile_and_income_come_from_faostat():
+    uz = regional.data()["countries"]["UZ"]
+    assert uz["top"][0]["name"] == "Wheat" and uz["cropland_ha"] > 1_000_000
+    money = regional.economics("UZ")
+    assert money["cotton"]["source"] == "country" and 500 < money["cotton"]["usd_ha"] < 5000
+    assert regional.economics(None)["maize"]["source"] == "world"
+    assert regional.economics("UZ")["alfalfa"]["source"] == "default"  # FAOSTAT has no alfalfa
+
+
+def test_rotations_follow_the_country(monkeypatch):
+    monkeypatch.setattr(regional, "local_cell", lambda lat, lon: None)  # no MapSPAM cell: country mix
+    d = climate.prepare(fake_data())
+    uz, us = regional.plan(d, "UZ", "medium", "furrow"), regional.plan(d, "US", "medium", "furrow")
+    crops_of = lambda p: {c for r in p["candidates"] for slot in r["years"] for c in slot}  # noqa: E731
+    assert "cotton" in crops_of(uz) and "soybean" in crops_of(us)
+    assert uz["profile"]["country"]["name"] == "Uzbekistan" and us["default_current"] != uz["default_current"]
+    for p in (uz, us):  # every generated rotation is feasible
+        assert p["candidates"] and all(not agro.conflicts(r["years"], False, p["field"].lib) for r in p["candidates"])
+    rot = uz["field"].rotations(None, None, None, uz["candidates"], uz["default_current"])
+    assert rot["current_id"] == uz["default_current"] and rot["best_id"]
+    region = texts.region("uz", uz["profile"])
+    assert region["title"] == "Hudud: Uzbekistan — nima ekiladi" and region["top"][0]["name"] == "Kuzgi bug'doy"
+
+
+def test_cold_point_drops_warm_crops():
+    data = fake_data()  # the whole record 12 C colder
+    data["params"] = {k: ([v - 12 for v in vals] if k.startswith("T2M") else vals) for k, vals in data["params"].items()}
+    data["fetched_at"] = "cold"
+    p = regional.plan(climate.prepare(data), "US", "medium", "furrow")
+    out = {x["id"] for x in p["profile"]["not_here"]}
+    assert "cotton" in out and "cotton" not in p["profile"]["grown_here"]
+
+
+def test_sowing_is_computed_for_the_point():
+    d = climate.prepare(fake_data())
+    maize = agro.localize(d, agro.CROPS["maize"])
+    assert maize["local_sow"] and 60 < maize["sow_doy"] < 180
+    south = fake_data(lat=-30.0)  # the same climate with the seasons moved by half a year
+    south["params"] = {k: v[182:] + v[:182] for k, v in south["params"].items()}
+    south["fetched_at"] = "south"
+    sow_s = agro.sow_date(agro.localize(climate.prepare(south), agro.CROPS["maize"]), 2001, True)
+    sow_n = agro.sow_date(maize, 2001, False)
+    gap = (sow_s.timetuple().tm_yday - sow_n.timetuple().tm_yday) % 365
+    assert abs(gap - 182) <= 15  # spring comes in October, not in April
+
+
+def test_offline_country_and_second_crop_placement():
+    assert geo.country_at(41.3, 69.2) == "UZ" and geo.country_at(42.0, -93.5) == "US" and geo.country_at(35.0, -40.0) is None
+    wheat, mung = agro.placed(["winter_wheat", "mung_bean"], agro.CROPS, False)
+    harvest = agro.sow_date(wheat, 2001, False) + agro.timedelta(days=sum(wheat["stages"]))
+    assert agro.sow_date(mung, 2001, False) == harvest + agro.timedelta(days=agro.SECOND_CROP_GAP_DAYS)
+
+
+def test_local_crop_mix_comes_from_the_province():
+    tashkent, khorezm, iowa = regional.local_cell(41.3, 69.2), regional.local_cell(41.45, 60.8), regional.local_cell(42.0, -93.5)
+    assert tashkent["country"] == "Uzbekistan"  # the cell crosses into Kazakhstan, the pixel does not
+    assert khorezm["region"] == "Khorezm" and khorezm["top"][0][0] == "cott"
+    assert {c for c, _ in iowa["top"][:2]} == {"maiz", "soyb"}
+    d = climate.prepare(fake_data(lat=42.0, lon=-93.5))
+    p = regional.plan(d, "US", "medium", "furrow")
+    assert p["profile"]["local"]["region"] == "Iowa" and {"maize", "soybean"} <= set(p["profile"]["grown_here"][:2])
+    region = texts.region("uz", p["profile"])
+    assert region["title"].startswith("Iowa") and "MapSPAM" in region["source_text"]
+    assert regional.local_cell(35.0, -40.0) is None  # open sea
