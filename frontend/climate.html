@@ -1,43 +1,11 @@
 <!doctype html>
-<html lang="uz">
+<html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TerraShift</title><meta name="description" content="Explore historical climate trends for your field.">
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="utf-8">
+  <title>TerraShift</title>
+  <meta http-equiv="refresh" content="0; url=/#climate">
+  <link rel="canonical" href="/#climate">
+  <script>location.replace("/" + location.search + "#climate");</script>
 </head>
-<body data-page="climate" data-title="page_title_climate">
-  <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
-    <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span></a>
-    <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/#app" data-page-link="home" data-t="nav_home"></a><a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
-      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a><a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
-      <a href="/current.html" data-page-link="current" data-t="nav_now"></a><a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
-    </nav>
-    <div class="top-actions"><div id="chips" class="chips" aria-live="polite"></div>
-      <div class="seg" role="group" data-t-aria="language_group"><button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button></div>
-      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
-    </div>
-  </header>
-  <div id="warnings" class="warnings" aria-live="polite"></div>
-  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-  <main class="page-main" id="main-content">
-    <section class="card" id="climate-card" aria-labelledby="climate-heading">
-      <div class="head"><h1 id="climate-heading" data-t="climate_title"></h1><span id="climate-meta" class="muted small"></span></div>
-      <div id="kpis" class="kpis"></div>
-      <div class="chart-head"><label class="field inline"><span data-t="metric"></span><select id="metric"></select></label></div>
-      <div class="chart tall"><canvas id="annual-chart"></canvas></div>
-      <p class="hint" data-t="projection_note"></p>
-      <h2 data-t="monthly_title"></h2>
-      <div class="legend-line small"><span class="swatch s1"></span><span id="legend-base"></span><span class="swatch s2"></span><span id="legend-recent"></span></div>
-      <div class="multiples">
-        <figure><figcaption data-t="m_temp"></figcaption><div class="chart"><canvas id="m-t"></canvas></div></figure>
-        <figure><figcaption data-t="m_rain"></figcaption><div class="chart"><canvas id="m-rain"></canvas></div></figure>
-        <figure><figcaption data-t="m_et0"></figcaption><div class="chart"><canvas id="m-et0"></canvas></div></figure>
-      </div>
-      <ul id="advice-climate" class="advice"></ul>
-    </section>
-  </main>
-  <script src="/vendor/chart.umd.min.js"></script><script src="/i18n.js"></script><script src="/app.js"></script>
-</body>
+<body><a href="/#climate">TerraShift</a></body>
 </html>

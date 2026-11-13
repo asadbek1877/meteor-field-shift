@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>TerraShift — landing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+<style>
+body{margin:0;background:#06061c}
+.lpo{container-type:inline-size;width:100%;background:#06061c}
+.lp{position:relative;width:100%;aspect-ratio:971/553;overflow:hidden;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:0}
+.lp *{box-sizing:border-box}
+.lp a{color:inherit;text-decoration:none}
+.lp :focus-visible{outline:2px solid #9a9dff;outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:12px;top:-80px;z-index:50;background:#4a4ed8;color:#fff!important;padding:12px 18px;border-radius:8px;font-weight:500}
+.skip:focus{top:12px}
+.card{position:absolute;inset:1.45% .82%;border-radius:2.27cqw;border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03),0 0 40px rgba(0,0,0,.55);background:radial-gradient(38% 52% at 20% 55%,rgba(98,94,208,.32),rgba(98,94,208,0) 70%),radial-gradient(26% 36% at 84% 22%,rgba(255,150,45,.20),rgba(255,150,45,0) 70%),radial-gradient(40% 55% at 76% 58%,rgba(40,70,170,.30),rgba(40,70,170,0) 72%),linear-gradient(135deg,#171852 0%,#0f0f3b 48%,#0a0a2c 100%)}
+.abs{position:absolute}
+.nav,.soc{position:absolute;inset:0;pointer-events:none}
+.nav>*,.soc>*{pointer-events:auto}
+.nv{position:absolute;top:8.14%;transform:translateY(-50%)}
+.nv>a,.nv>summary{display:flex;align-items:center;gap:.55cqw;min-height:44px;font-size:1.62cqw;font-weight:400;color:rgba(255,255,255,.95);cursor:pointer;list-style:none;white-space:nowrap}
+.nv>summary::-webkit-details-marker{display:none}
+.nv svg{flex:none}
+.nv[open] summary svg{transform:rotate(180deg)}
+.nv svg{transition:transform .3s cubic-bezier(.3,1.3,.5,1)}
+.dd{position:absolute;left:-1.1cqw;top:calc(100% - 2px);min-width:15cqw;padding:6px;border-radius:14px;background:rgba(22,22,66,.88);backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);border:1px solid rgba(255,255,255,.12);box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;z-index:30}
+.dd a{display:flex;align-items:center;min-height:44px;padding:0 14px;border-radius:9px;font-size:max(15px,1.4cqw);white-space:nowrap}
+.dd a:hover{background:rgba(255,255,255,.1)}
+.ic{position:absolute;top:8.32%;transform:translate(-50%,-50%);width:3.4cqw;min-width:40px;height:44px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.92)}
+.ic:hover{color:#fff}
+.ic svg{width:1.6cqw;min-width:18px;height:auto}
+.mk{position:absolute;width:1.95cqw;height:1.95cqw;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#fff 0 27%,#3cc6c6 31% 100%);box-shadow:0 0 0 .3cqw rgba(50,190,190,.22),0 0 1.4cqw rgba(60,205,205,.65)}
+.mk::after{content:"";position:absolute;inset:-55%;border-radius:50%;border:1px solid rgba(80,215,215,.6);animation:pl 2.8s ease-out infinite}
+@keyframes pl{from{transform:scale(.55);opacity:.9}to{transform:scale(1.5);opacity:0}}
+.cta{position:absolute;left:24.9%;top:69.26%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;gap:.9cqw;min-width:12.4cqw;min-height:max(44px,2.7cqw);padding:0 1.5cqw;border-radius:.35cqw;background:linear-gradient(180deg,#5659e6,#4044cb);color:#fff!important;font-size:max(15px,1.34cqw);font-weight:400;box-shadow:0 0 1.8cqw rgba(78,80,225,.5),inset 0 1px 0 rgba(255,255,255,.18);transition:transform .3s cubic-bezier(.3,1.4,.5,1),box-shadow .3s}
+.cta:hover{transform:translate(-50%,-50%) scale(1.03);box-shadow:0 0 2.4cqw rgba(96,98,245,.7),inset 0 1px 0 rgba(255,255,255,.22)}
+.cta:active{transform:translate(-50%,-50%) scale(.97)}
+.dn{position:absolute;left:49.95%;top:90.4%;transform:translate(-50%,-50%);width:max(44px,4cqw);height:max(44px,4cqw);display:flex;align-items:center;justify-content:center;color:#fff}
+.dn svg{width:3.5cqw;min-width:30px;height:auto;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(-3px)}50%{transform:translateY(3px)}}
+.t1,.t2{position:absolute;transform:translateY(-50%);white-space:nowrap;margin:0}
+@container (max-width:820px){
+.lp{aspect-ratio:auto!important;display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;padding:18px 20px 0;gap:0}
+.fl{position:relative!important;left:auto!important;top:auto!important;transform:none!important}
+.dc{display:none!important}
+.logo{order:1;flex:1 1 auto;width:auto!important;height:auto!important}
+.soc{position:relative!important;inset:auto!important;order:2;display:flex;flex:none}
+.soc .ln{display:none}
+.soc .ic{position:relative;left:auto!important;top:auto!important;transform:none;width:44px}
+.soc .ic svg{width:20px}
+.nav{position:relative!important;inset:auto!important;order:3;flex:0 0 100%;display:flex;flex-wrap:wrap;gap:0 6px;margin-top:4px}
+.nav .nv{position:relative;left:auto!important;top:auto!important;transform:none}
+.nav .nv>a,.nav .nv>summary{font-size:16px;padding:0 10px}
+.dd{min-width:180px;left:0}
+.hd{order:4;flex:0 0 100%;margin:30px 0 0}
+.hd .t1,.hd .t2{position:static!important;transform:none!important;display:block;white-space:normal}
+.hd .t1{font-size:23px!important;line-height:1.25}
+.hd .t2{font-size:38px!important;line-height:1.15;margin-top:6px;padding-left:0!important}
+.lead{order:5;flex:0 0 100%;width:auto!important;font-size:16px!important;line-height:1.5!important;margin:16px 0 0!important}
+.cta{order:6;flex:none;margin-top:22px;min-width:150px;font-size:16px;border-radius:6px;padding:0 24px}
+.cta:hover,.cta:active{transform:none}
+.gl{order:7;flex:0 0 118%!important;width:118%!important;margin:-6% 0 0 -9%!important}
+}
+@media (prefers-reduced-motion:reduce){.mk::after,.dn svg{animation:none}.nv svg,.cta{transition:none}}
+</style>
+</helmet>
+<div class="lpo">
+<div class="lp">
+<a class="skip" href="#main-content">Asosiy mazmunga o'tish</a>
+<div class="card" aria-hidden="true"></div>
+
+<div class="abs dc" aria-hidden="true" style="left: 74.05%; top: 84.6%; width: 13cqw; height: 1.3cqw; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(190,210,255,.16), rgba(190,210,255,0))"></div>
+
+<div class="abs gl fl" aria-hidden="true" style="left: 74.05%; top: 53.98%; width: 47.94cqw; aspect-ratio: 1 / 1; transform: translate(-50%, -50%)">
+<img src="assets/globe.webp" alt="" width="1400" height="1400" style="display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none">
+<span class="mk" style="left: 39.93%; top: 39.6%"></span>
+<span class="mk" style="left: 60.07%; top: 43.04%"></span>
+<span class="mk" style="left: 43.79%; top: 70.28%"></span>
+</div>
+
+<svg class="abs dc" aria-hidden="true" viewBox="0 0 971 553" preserveAspectRatio="none" style="left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible" fill="none">
+<path d="M766 266C771 170 798 98 893 41" stroke="rgba(255,255,255,.62)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+<path d="M690 393C640 450 596 497 548 539" stroke="rgba(255,255,255,.55)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+<path d="M497 152C548 156 580 170 598 189" stroke="rgba(255,255,255,.30)" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+</svg>
+
+<a class="abs logo fl" href="Main.dc.html" aria-label="TerraShift — bosh sahifa" style="left: 7.83%; top: 8.05%; width: 3.9cqw; height: 3.9cqw; min-width: 44px; min-height: 44px; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center">
+<svg viewBox="0 0 40 40" aria-hidden="true" style="width: 100%; height: 100%; min-width: 36px">
+<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E6397E"></stop><stop offset="1" stop-color="#4B4FE0"></stop></linearGradient></defs>
+<rect width="40" height="40" rx="11" fill="url(#lg)"></rect>
+<path d="M8 25c6-8 18-8 24 0M8 18c6-8 18-8 24 0M11 31c4-5 14-5 18 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"></path>
+</svg>
+</a>
+
+<nav class="nav" aria-label="Asosiy bo'limlar">
+<details class="nv" style="left: 15.45%">
+<summary>Dala<svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width: 0.95cqw; min-width: 9px; height: auto"><path d="M1 1l4 4 4-4"></path></svg></summary>
+<div class="dd"><a href="Main.dc.html">Dala va xulosa</a><a href="Crops.dc.html">Ekinlar</a></div>
+</details>
+<div class="nv" style="left: 29.35%"><a href="Rotations.dc.html">Rotatsiyalar</a></div>
+<details class="nv" style="left: 44.49%">
+<summary>Iqlim<svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width: 0.95cqw; min-width: 9px; height: auto"><path d="M1 1l4 4 4-4"></path></svg></summary>
+<div class="dd"><a href="Climate.dc.html">Iqlim o'zgarishi</a><a href="Now.dc.html">Hozirgi sharoit</a></div>
+</details>
+<div class="nv" style="left: 62.2%"><a href="Sources.dc.html">Manbalar</a></div>
+</nav>
+
+<div class="soc">
+<span class="abs dc ln" aria-hidden="true" style="left: 81.9%; top: 8.32%; width: 3.6cqw; height: 1px; background: rgba(255,255,255,.65); transform: translateY(-50%)"></span>
+<a class="ic" href="https://github.com/asadbek1877/meteor-field-shift" aria-label="Loyiha kodi (GitHub)" style="left: 88.05%"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5 2 10l5 5M13 5l5 5-5 5"></path></svg></a>
+<a class="ic" href="https://power.larc.nasa.gov/" aria-label="NASA POWER ma'lumotlari" style="left: 91.45%"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="8"></circle><path d="M2 10h16M10 2c3 2.4 3 13.6 0 16M10 2c-3 2.4-3 13.6 0 16"></path></svg></a>
+<a class="ic" href="Sources.dc.html" aria-label="Manbalar va usul" style="left: 94.85%"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2"></rect><path d="m3.5 5.5 6.5 5 6.5-5"></path></svg></a>
+</div>
+
+<div class="abs dc" aria-hidden="true" style="left: 4.43%; top: 43.85%; display: flex; flex-direction: column; align-items: center; gap: .7cqw; transform: translateX(-50%)">
+<span style="width: 1.13cqw; height: 1.13cqw; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center"><span style="width: .4cqw; height: .4cqw; border-radius: 50%; background: #fff"></span></span>
+<span style="width: .4cqw; height: .4cqw; border-radius: 50%; background: rgba(255,255,255,.5)"></span>
+<span style="width: .4cqw; height: .4cqw; border-radius: 50%; background: rgba(255,255,255,.5)"></span>
+<span style="width: .4cqw; height: .4cqw; border-radius: 50%; background: rgba(255,255,255,.5)"></span>
+<span style="width: .4cqw; height: .4cqw; border-radius: 50%; background: rgba(255,255,255,.5)"></span>
+</div>
+
+<svg class="abs dc" aria-hidden="true" viewBox="0 0 36 36" style="left: 9.27%; top: 36.17%; width: 3.7cqw; height: 3.7cqw; transform: translate(-50%, -50%)" fill="none"><path d="M18 0v36M0 18h36" stroke="rgba(255,255,255,.62)" stroke-width="1.1"></path></svg>
+<svg class="abs dc" aria-hidden="true" viewBox="0 0 36 36" style="left: 50.57%; top: 54.07%; width: 3.7cqw; height: 3.7cqw; transform: translate(-50%, -50%)" fill="none"><path d="M18 0v36M0 18h36" stroke="rgba(255,255,255,.62)" stroke-width="1.1"></path></svg>
+
+<main id="main-content" style="display: contents">
+<h1 class="hd fl" style="margin: 0; font-weight: inherit">
+<span class="t1" style="left: 12.15%; top: 40.87%; font-size: 2.68cqw; font-weight: 300; color: rgba(255,255,255,.9); line-height: 1.2">Iqlimga mos almashlab ekish</span>
+<span class="t2" style="left: 16.27%; top: 49.19%; font-size: 3.4cqw; font-weight: 500; color: #fff; line-height: 1.2; padding-left: 0">NASA ma'lumotlari</span>
+</h1>
+<p class="abs lead fl" style="left: 12.15%; top: 54.25%; width: 35.5cqw; margin: 0; font-size: 1.14cqw; line-height: 1.1; font-weight: 400; color: rgba(255,255,255,.92)">Dalangizni xaritada belgilang: NASA ma'lumoti 15 yillik haqiqiy ob-havo ustida almashlab ekishni sinab ko'radi.</p>
+<a class="cta fl" href="Main.dc.html">Boshlash<svg viewBox="0 0 8 12" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width: .6cqw; min-width: 7px; height: auto"><path d="M1.5 1.5 6 6l-4.5 4.5"></path></svg></a>
+</main>
+
+<a class="dn dc" href="Main.dc.html" aria-label="Dalani tanlashga o'tish"><svg viewBox="0 0 34 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l15 9 15-9M2 9l15 9 15-9"></path></svg></a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":820}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

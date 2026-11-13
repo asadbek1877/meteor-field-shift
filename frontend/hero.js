@@ -186,8 +186,12 @@
     journey.classList.add("is-done");
     root.classList.remove("journey-on");
     if (app) app.inert = false;
-    history.replaceState(null, "", "#app");
+    const target = (event.currentTarget && event.currentTarget.hash) || "#app";
+    history.replaceState(null, "", target);
     window.scrollTo(0, 0);
+    const section = target !== "#app" && document.querySelector(target);
+    if (section) setTimeout(() => section.scrollIntoView({ behavior: "smooth" }), 400);
+    window.dispatchEvent(new Event("terrashift:app-visible"));
     const main = document.getElementById("main-content");
     if (main) { main.setAttribute("tabindex", "-1"); main.focus({ preventScroll: true }); }
     setTimeout(() => {
