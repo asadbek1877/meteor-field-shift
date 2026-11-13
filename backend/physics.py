@@ -128,3 +128,21 @@ def et0_penman_monteith(t_max: float, t_min: float, t_mean: float, rs: float, u2
     et0 = (0.408 * delta * (rn - g) + gamma * 900 / (t_mean + 273) * u2 * (es - ea)) / (
         delta + gamma * (1 + 0.34 * u2))
     return max(et0, 0.0)
+
+
+# ---------- soil water ----------
+
+def saxton_rawls(sand_pct: float, clay_pct: float, organic_matter_pct: float = 1.5) -> tuple[float, float]:
+    """Volumetric water content at field capacity (33 kPa) and wilting point (1500 kPa), m3/m3.
+
+    Saxton & Rawls (2006), Soil Sci. Soc. Am. J. 70:1569-1578, equations 1 and 2.
+    Valid for clay below 60 % and organic matter below 8 %; inputs are clamped to that range.
+    """
+    s = max(0.0, min(sand_pct, 100.0)) / 100
+    c = max(0.0, min(clay_pct, 60.0)) / 100
+    om = max(0.0, min(organic_matter_pct, 8.0))
+    t1500 = -0.024 * s + 0.487 * c + 0.006 * om + 0.005 * s * om - 0.013 * c * om + 0.068 * s * c + 0.031
+    wp = t1500 + (0.14 * t1500 - 0.02)
+    t33 = -0.251 * s + 0.195 * c + 0.011 * om + 0.006 * s * om - 0.027 * c * om + 0.452 * s * c + 0.299
+    fc = t33 + (1.283 * t33 * t33 - 0.374 * t33 - 0.015)
+    return fc, wp

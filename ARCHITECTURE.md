@@ -54,6 +54,13 @@ with `ADMIN_TOKEN` set: a map tile layer, or a JSON API that is returned as raw
 | `backend/nasa_client.py` | NASA POWER daily and monthly clients |
 | `backend/providers.py` | provider registry, GIBS layers, SoilGrids, Open-Meteo, health checks |
 | `backend/geo.py` | place search (Nominatim, Photon backup; search on submit only, 1 req/s) and OSM land cover at the point |
+| `backend/terrain.py` | NASA SRTM 30 m (OpenTopoData, 1 req/s, disk cache): height, slope and aspect from a 3×3 window 60 m apart → erosion / steep-slope warnings in `suitability.judge`; height drives the temperature lapse correction |
+| `backend/earthdata.py` | Earthdata token (`.env` `EARTHDATA_TOKEN`): CMR granule search, cloud OPeNDAP point subsets read with h5py, LP DAAC COG pixels read with rasterio via the signed S3 link; grid helpers (EASE-2 9 km, MODIS sinusoidal, IMERG 0.1°, GLDAS 0.25°) |
+| `backend/observe.py` | `/api/observations`: per-point NASA observations fetched in the background and cached in `backend/cache/obs/` — SMAP L4 soil moisture (30 d), GPM IMERG Late rain (60 d), GLDAS-2.1 monthly soil water percentile since 2000, MODIS MOD13Q1 NDVI (3 y), HLS 30 m NDVI (60 d, Fmask), ECOSTRESS LST + daily ET; FAO GAEZ v4 suitability (global); OpenET (western US, key), PRISM 10-year annual normals, USGS NWIS gauges, CoCoRaHS rain gauges (US) |
+| `backend/usa.py` | US fields: FCC county, USDA CDL crop of every year since 2008 → the field's real rotation (the default "current" rotation), SSURGO soil (texture, AWC, drainage, K factor) replacing SoilGrids, NASS QuickStats county yields (`.env` `NASS_API_KEY`) |
+| `backend/landcover.py` | 10 m satellite land cover (Sentinel-2, Impact Observatory/Microsoft/Esri, public ImageServer `getSamples`): the point + rings at 30 m and 100 m in one request → water / deep water / built-up / snow-ice / sea / bare / trees / crops. Decides water, buildings, ice and sea in `suitability.judge`; OpenStreetMap only adds names and exact buildings/roads |
+| `backend/weekly.py` | this week's advice for the region's main crops (MapSPAM mix): growth stage, irrigation need in m³/ha with the 10–90 % range of 82 ensemble members, heat/frost alerts in the crop's sensitive stage, scorching ground for seedlings, downpours; for crops about to be sown: soil temperature at 6 cm vs. germination threshold, frost and crusting rain → sow / wait |
+| `backend/water.py` | `/api/water`: soil water forecast of one field — FAO-56 dual crop coefficient (surface evaporation + transpiration, two-layer daily balance) from the last irrigation through the 16-day forecast; every member of the ECMWF (51) + GEFS (31) ensembles is run, so the dry date comes as 10/50/90 % quantiles with a probability; water need in mm, m³/ha, m³ and litres for the field |
 | `backend/regional.py` | regional crop plan: FAOSTAT country mix → crops that ripen at this point (local sowing date, frost, season temperature) → generated rotations (typical / local / with a new legume, double cropping) → scored by `agro.Field` |
 | `backend/data/country_crops.json` | FAOSTAT 2020–2024 per country: cropland share, yield, producer price (rebuild: `python -m backend.tools.build_country_crops QCL.zip PP.zip all.csv`) |
 | `backend/data/local_crops.json.gz` | MapSPAM 2020 v2r2 (IFPRI, CC BY 4.0): crop mix per province on a 0.25° grid, 3×3 sub-pixels keep border cells apart (rebuild: `python -m backend.tools.build_local_crops spam2020V2r2_global_harvested_area.csv.zip`) |
@@ -116,3 +123,20 @@ with `ADMIN_TOKEN` set: a map tile layer, or a JSON API that is returned as raw
   Information System (ESDIS)." Check at https://earthdata.nasa.gov/gibs
 - FAO-56: Allen, R.G., Pereira, L.S., Raes, D., Smith, M. (1998). Crop
   evapotranspiration. FAO Irrigation and Drainage Paper 56.
+
+
+## Accuracy measures (2026-11-12)
+
+| Weak point | What is done |
+|---|---|
+| NASA POWER temperature is for the mean height of a ~50 km cell | `climate.prepare(data, point_elevation)`: lapse-rate correction to the field's height (Copernicus DEM via Open-Meteo, cached in `backend/cache/elevation.json`); 6.5 °C/km for maxima, 4.5 °C/km for minima so valley frost is not corrected away |
+| Three soil classes | `agro.soil_water()`: field capacity and wilting point from measured sand/clay/organic carbon (SoilGrids) with Saxton & Rawls (2006); class values only as fallback |
+| SoilGrids answers in ~10 s or not at all | background fetch with a 25 s timeout and a disk cache (`backend/cache/soil.json`); a request waits 3.5 s, the next one has the soil |
+| One national yield per crop | province yield from MapSPAM (production / harvested area) × country price (FAOSTAT) |
+| One rain forecast, guessed ±50 % | 82 ensemble members run through the water balance |
+| Small showers, surface drying | dual crop coefficient: the top 10 cm are balanced separately |
+| Unknown starting soil moisture | from the farmer's last irrigation date; else from sowing / 60 days of observed weather, stated as "no irrigation assumed" |
+| A reservoir or a hospital yard was rated "fine" (OSM reverse returns the nearest label, e.g. a road) | satellite land cover at the point and 100 m around decides; verified on Charvak, Aydarkul, Tuyamuyun, Caspian, two Tashkent hospitals, Fedchenko glacier |
+| Past rain was a weather-model estimate | GPM IMERG observed daily rain replaces it in the water balance; ERA5 reanalysis for days older than 6 days |
+| Unknown starting soil moisture (no irrigation date) | NASA SMAP L4 root-zone moisture of the start day |
+| No check that a crop is really in the field | HLS 30 m NDVI: "bare field" warning in the weekly advice |

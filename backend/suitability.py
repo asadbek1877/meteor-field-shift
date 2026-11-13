@@ -63,20 +63,84 @@ def climate_facts(d: Days) -> dict | None:
     }
 
 
-def judge(cover: dict | None, facts: dict | None, no_soil: bool) -> dict:
-    """-> {"status", "reasons": [{"code", "level": unsuitable|limited|info, ...numbers}], "land", "climate"}"""
+# satellite class at the point -> (reason code, level)
+SAT_RULE = {
+    "water": ("water", "unsuitable"), "snow_ice": ("glacier", "unsuitable"), "built": ("built", "unsuitable"),
+    "flooded_vegetation": ("wetland", "limited"), "bare": ("bare", "limited"), "trees": ("trees", "limited"),
+    "rangeland": ("rangeland", "info"), "crops": ("crops_seen", "info"),
+}
+# OSM land codes that describe the same thing as a satellite class (the more specific OSM text is kept)
+SAME = {"water": {"water", "sea"}, "glacier": {"glacier"}, "built": {"building", "road", "transport", "urban", "park"},
+        "wetland": {"wetland"}, "trees": {"forest"}}
+NAME_FITS = {
+    "built": {"amenity", "building", "healthcare", "shop", "office", "tourism", "leisure", "man_made",
+              "craft", "historic", "landuse", "aeroway", "railway"},
+    "water": {"natural", "water", "waterway", "place"}, "deep_water": {"natural", "water", "waterway", "place"},
+    "glacier": {"natural"}, "wetland": {"natural"},
+}
+EDGE_MIN = 3          # of 8 ring points: the field borders water or buildings
+DEEP_MIN = 6          # of 8 points on each ring: water all around, not just the shore
+
+
+SLOPE_RULE = {"moderate": "info", "strong": "limited", "steep": "unsuitable"}
+
+
+def judge(cover: dict | None, facts: dict | None, no_soil: bool, sat: dict | None = None,
+          relief: dict | None = None) -> dict:
+    """-> {"status", "reasons": [{"code", "level": unsuitable|limited|info, ...numbers}], "land", "climate"}
+
+    cover: OpenStreetMap at the point (geo.land_cover), sat: 10 m satellite land cover (landcover.sample).
+    The satellite decides for water, ice, built-up land and sea; OpenStreetMap adds names and exact
+    buildings and roads; NASA POWER decides about the climate.
+    """
     reasons: list[dict] = []
     land = cover.get("kind") if cover else None
+    center = sat.get("center") if sat else None
+    osm_name = cover.get("name") if cover else None
+    osm_tag = cover.get("osm") if cover else None
 
+    # 1. satellite: what really covers the ground
+    sat_code = None
+    if center == "nodata":
+        if cover is None or not cover.get("found"):           # no pixel and no address: open sea
+            sat_code = "sea"
+            reasons.append({"code": "sea", "level": "unsuitable", "name": None, "osm": None})
+    elif center in SAT_RULE:
+        sat_code, level = SAT_RULE[center]
+        if sat_code == "water" and sat["near"].get("water", 0) >= DEEP_MIN and sat["around"].get("water", 0) >= DEEP_MIN:
+            sat_code = "deep_water"                            # water for 100 m all around
+        # a town-address guess from OSM is overruled when the satellite sees a field
+        if land == "urban" and center in ("crops", "rangeland", "bare"):
+            land = None
+        if not (land and land in SAME.get(sat_code.replace("deep_water", "water"), set())):
+            # OSM gives the nearest named object; its name is shown only when it is the same kind of thing
+            category = (osm_tag or "").split("=")[0]
+            fits = NAME_FITS.get(sat_code, set())
+            reasons.append({"code": sat_code, "level": level, "name": osm_name if category in fits else None, "osm": osm_tag})
+
+    # 2. OpenStreetMap: exact buildings and roads, named places
     if land in LAND_UNSUITABLE:
-        reasons.append({"code": land, "level": "unsuitable", "name": cover.get("name"), "osm": cover.get("osm")})
+        reasons.append({"code": land, "level": "unsuitable", "name": osm_name, "osm": osm_tag})
     elif land in LAND_LIMITED:
-        reasons.append({"code": land, "level": "limited", "name": cover.get("name"), "osm": cover.get("osm")})
-    elif no_soil and land != "farmland":
+        reasons.append({"code": land, "level": "limited", "name": osm_name, "osm": osm_tag})
+    elif no_soil and land != "farmland" and sat_code not in ("sea", "water", "deep_water", "glacier"):
         # NASA POWER has no root-zone soil wetness: the grid cell is ocean, lake or ice sheet.
         open_sea = cover is not None and not cover.get("found")
         reasons.append({"code": "sea" if open_sea else "no_soil", "level": "unsuitable", "name": None, "osm": None})
 
+    # 3. a field next to water or houses: worth a warning, not a refusal
+    if sat and center in ("crops", "rangeland", "bare", "trees"):
+        for kind in ("water", "built"):
+            n = max(sat["near"].get(kind, 0), sat["around"].get(kind, 0))
+            if n >= EDGE_MIN:
+                reasons.append({"code": "edge_" + kind, "level": "info", "n": n})
+
+    # 4. terrain (NASA SRTM): steep land washes away under annual crops
+    if relief and relief.get("class") in SLOPE_RULE and sat_code not in ("sea", "water", "deep_water", "glacier"):
+        reasons.append({"code": "slope_" + relief["class"], "level": SLOPE_RULE[relief["class"]],
+                        "slope": relief["slope_pct"], "deg": relief["slope_deg"]})
+
+    # 5. climate
     if facts:
         if facts["growing_months"] == 0:
             reasons.append({"code": "too_cold", "level": "unsuitable", "t": facts["warmest_t_c"]})
@@ -89,15 +153,18 @@ def judge(cover: dict | None, facts: dict | None, no_soil: bool) -> dict:
             reasons.append({"code": "extreme_heat", "level": "limited", "t": facts["warmest_tmax_c"]})
 
     if land == "farmland":
-        reasons.append({"code": "farmland", "level": "info", "name": cover.get("name"), "osm": cover.get("osm")})
+        reasons.append({"code": "farmland", "level": "info", "name": osm_name, "osm": osm_tag})
 
+    # the most serious reasons first
+    order = {"unsuitable": 0, "limited": 1, "info": 2}
+    reasons.sort(key=lambda r: order[r["level"]])
     levels = {r["level"] for r in reasons}
     status = "unsuitable" if "unsuitable" in levels else "limited" if "limited" in levels else "ok"
     return {
         "status": status,
         "reasons": reasons,
-        "land": {"kind": land, "osm": cover.get("osm"), "place": cover.get("place"), "checked": True}
-        if cover else {"kind": None, "osm": None, "place": None, "checked": False},
+        "land": {"kind": land, "osm": osm_tag, "place": cover.get("place") if cover else None,
+                 "checked": cover is not None or sat is not None, "satellite": sat, "terrain": relief},
         "climate": facts,
     }
 

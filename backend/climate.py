@@ -39,6 +39,8 @@ class Days:
     spans: dict              # year -> (first index, last index + 1) for complete years
     pm_share: float          # share of days where Penman-Monteith could be used
     gaps: int                # days filled from the previous day
+    grid_elevation: float = 0.0     # mean elevation of the NASA grid cell
+    correction_c: tuple = (0.0, 0.0, 0.0)   # added to (mean, max, min) temperature for the point's elevation
 
     @property
     def daily(self) -> bool:
@@ -72,8 +74,30 @@ def _fill(values: list, n: int, default):
     return out, gaps
 
 
-def prepare(data: dict) -> Days:
-    key = (data["lat"], data["lon"], data["fetched_at"])
+# Temperature change per km of height, C. NASA POWER temperatures are for the mean elevation of a
+# ~50 km grid cell, while fields usually lie in the valleys below it. Daytime maxima follow the free-air
+# rate (6.5); night minima change less with height because cold air pools in valleys, so a smaller rate
+# keeps frost from being corrected away. Rule-of-thumb rates used for station downscaling.
+LAPSE_MAX_C_KM, LAPSE_MIN_C_KM = 6.5, 4.5
+MIN_ELEVATION_DIFF_M, MAX_ELEVATION_DIFF_M = 100.0, 3000.0
+
+
+def elevation_correction(grid_m: float, point_m: float | None) -> tuple[float, float, float]:
+    """Degrees to add to (mean, max, min) temperature to move it from the grid cell to the point."""
+    if point_m is None:
+        return 0.0, 0.0, 0.0
+    diff = max(-MAX_ELEVATION_DIFF_M, min(MAX_ELEVATION_DIFF_M, point_m - grid_m))
+    if abs(diff) < MIN_ELEVATION_DIFF_M:
+        return 0.0, 0.0, 0.0
+    hi, lo = -LAPSE_MAX_C_KM * diff / 1000, -LAPSE_MIN_C_KM * diff / 1000
+    return round((hi + lo) / 2, 2), round(hi, 2), round(lo, 2)
+
+
+def prepare(data: dict, point_elevation: float | None = None) -> Days:
+    """point_elevation: real elevation of the field (m); temperatures are corrected to it."""
+    grid_elev = data.get("elevation") or 0.0
+    d_mean, d_max, d_min = elevation_correction(grid_elev, point_elevation)
+    key = (data["lat"], data["lon"], data["fetched_at"], d_max)
     if key in _prepared:
         return _prepared[key]
     p = data["params"]
@@ -85,6 +109,10 @@ def prepare(data: dict) -> Days:
     t, gaps = _fill(p["T2M"], n, 0.0)
     tmax, _ = _fill(p["T2M_MAX"], n, None)
     tmin, _ = _fill(p["T2M_MIN"], n, None)
+    if d_max:
+        t = [v + d_mean for v in t]
+        tmax = [v + d_max if v is not None else None for v in tmax]
+        tmin = [v + d_min if v is not None else None for v in tmin]
     rain = [v if v is not None else 0.0 for v in p["PRECTOTCORR"][:n]]
     soil = p["GWETROOT"][:n]
     rh, ws, rs = p["RH2M"], p["WS2M"], p["ALLSKY_SFC_SW_DWN"]
@@ -97,7 +125,8 @@ def prepare(data: dict) -> Days:
         doy.append(d.timetuple().tm_yday)
         d += one
 
-    lat, elev = data["lat"], data.get("elevation") or 0.0
+    lat = data["lat"]
+    elev = point_elevation if d_max and point_elevation is not None else grid_elev
     ra_by_doy = [ph.extraterrestrial_radiation(lat, k) for k in range(0, 367)]
     et0, pm_days = [], 0
     for i in range(n):
@@ -118,7 +147,8 @@ def prepare(data: dict) -> Days:
             spans[y] = (i0, i1)
 
     days = Days(lat, data["lon"], elev, data.get("resolution", "daily"), start, n, t, tmax, tmin,
-                rain, et0, soil, year, doy, spans, pm_days / n if n else 0.0, gaps)
+                rain, et0, soil, year, doy, spans, pm_days / n if n else 0.0, gaps,
+                grid_elev, (d_mean, d_max, d_min))
     with _prepared_lock:  # requests run in parallel threads
         if len(_prepared) > 24:
             _prepared.pop(next(iter(_prepared)), None)
@@ -344,5 +374,7 @@ def analyze(d: Days) -> dict:
             "name": "FAO-56 Penman-Monteith" if d.pm_share > 0.9 else "FAO-56 Penman-Monteith + Hargreaves",
         },
         "data_quality": {"resolution": d.resolution, "days": d.n, "filled_days": d.gaps,
-                         "last_day": d.day(d.n - 1).isoformat(), "elevation_m": rnd(d.elevation, 0)},
+                         "last_day": d.day(d.n - 1).isoformat(), "elevation_m": rnd(d.elevation, 0),
+                         "grid_elevation_m": rnd(d.grid_elevation, 0),
+                         "temperature_correction_c": {"mean": d.correction_c[0], "max": d.correction_c[1], "min": d.correction_c[2]}},
     }

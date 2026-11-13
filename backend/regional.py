@@ -125,16 +125,29 @@ def local_cell(lat: float, lon: float) -> dict | None:
                         ha_by_crop[i] = ha_by_crop.get(i, 0) + ha
     top = sorted(ha_by_crop.items(), key=lambda kv: -kv[1])[:8]
     return {"region": region["name"], "country": region["country"], "cropland_ha": total_ha,
-            "top": [(db["crops"][i], ha) for i, ha in top], "source": db["_source"]}
+            "top": [(db["crops"][i], ha) for i, ha in top], "yield": region.get("yield", {}),
+            "source": db["_source"]}
 
 
 def crop_ids(item: int) -> list[str]:
     return SAME_ITEM_ORDER.get(item) or [c["id"] for c in agro.CONFIG["crops"] if c.get("fao_item") == item]
 
 
-def economics(iso: str | None) -> dict[str, dict]:
-    """crop id -> {usd_ha, yield_t_ha, price_usd_t, source}; source says which level filled the gap."""
+YIELD_RATIO = (0.25, 3.0)   # a province yield outside this range of the national one is not trusted
+
+
+def economics(iso: str | None, region_yield: dict | None = None, county_yield: dict | None = None) -> dict[str, dict]:
+    """crop id -> {usd_ha, yield_t_ha, price_usd_t, source, yield_source}.
+
+    Price: FAOSTAT producer price of the country, else the sub-region or world median.
+    Yield: the province's own yield (MapSPAM production / harvested area) when given and plausible,
+    else the national FAOSTAT yield, else the sub-region or world median.
+    """
     db = data()
+    spam_code = {}
+    for code, ids in SPAM_CROP_IDS.items():
+        for cid in ids:
+            spam_code.setdefault(cid, code)
     country = db["countries"].get(iso or "")
     sub = db["subregions"].get(country["subregion"], {}) if country else {}
     out = {}
@@ -154,6 +167,13 @@ def economics(iso: str | None) -> dict[str, dict]:
         w = db["world"].get(key, {})
         if y and p and w.get("yield") and w.get("price") and y * p > OUTLIER * w["yield"] * w["price"]:
             y, p, src = w["yield"], w["price"], "world"
+        local = (region_yield or {}).get(spam_code.get(crop["id"], ""))
+        reference = y or w.get("yield")
+        if local and p and reference and YIELD_RATIO[0] * reference <= local <= YIELD_RATIO[1] * reference:
+            y, src = local, "region"
+        nass = (county_yield or {}).get(crop["id"])            # US: official county (or state) survey yield
+        if nass and p and reference and YIELD_RATIO[0] * reference <= nass["t_ha"] <= YIELD_RATIO[1] * reference:
+            y, src = nass["t_ha"], "nass_" + nass["level"]
         if y and p:
             out[crop["id"]] = {"usd_ha": round(y * p), "yield_t_ha": round(y, 2), "price_usd_t": round(p), "source": src}
         else:
@@ -190,15 +210,20 @@ def _rotation(years: list, origin: str) -> dict:
             "years": years, "origin": origin}
 
 
-def plan(d: Days, iso: str | None, soil: str, irrigation: str) -> dict:
-    """-> {"field": agro.Field, "candidates", "default_current", "show": crop ids for the crop table, "profile"}"""
+def plan(d: Days, iso: str | None, soil: str, irrigation: str, awc: float | None = None,
+         us: dict | None = None) -> dict:
+    """-> {"field": agro.Field, "candidates", "default_current", "show": crop ids for the crop table, "profile"}
+
+    awc: available water capacity from the measured soil texture (mm per m); None = value of the soil class.
+    """
     iso = (iso or "").upper() or None
     db = data()
     country = db["countries"].get(iso or "")
     monthly = agro._monthly_recent(d)
     local = {cid: agro.localize(d, crop, monthly) for cid, crop in agro.CROPS.items()}
-    money = economics(iso)
-    field = agro.Field(d, soil, irrigation, crops=local, revenue={k: v["usd_ha"] for k, v in money.items()})
+    cell = local_cell(d.lat, d.lon)
+    money = economics(iso, cell["yield"] if cell else None, (us or {}).get("yields"))
+    field = agro.Field(d, soil, irrigation, crops=local, revenue={k: v["usd_ha"] for k, v in money.items()}, awc=awc)
 
     # 1. which crops work at this point
     verdict = {cid: _verdict(crop, field._period(crop, RECENT)) for cid, crop in local.items()}
@@ -206,7 +231,6 @@ def plan(d: Days, iso: str | None, soil: str, irrigation: str) -> dict:
 
     # 2. what is grown HERE (MapSPAM cell), else in the country (FAOSTAT), else in the world
     share: dict[str, float] = {}
-    cell = local_cell(d.lat, d.lon)
     top: list[dict] = []
     if cell:
         total = sum(ha for _, ha in cell["top"]) or 1
@@ -277,6 +301,13 @@ def plan(d: Days, iso: str | None, soil: str, irrigation: str) -> dict:
             add(years, "typical")
             if cands:
                 break
+        # US: what this very field grew in the last years (Cropland Data Layer) is the current rotation
+        field_rot = (us or {}).get("rotation")
+        if field_rot:
+            before = len(cands)
+            add(field_rot["years"], "this_field")
+            if len(cands) > before:
+                cands.insert(0, cands.pop())
         default_id = cands[0]["id"] if cands else None
         if iso == "UZ":  # reviewed reference rotations of the Uzbek case
             for r in agro.ROTATIONS["rotations"]:
@@ -336,5 +367,9 @@ def plan(d: Days, iso: str | None, soil: str, irrigation: str) -> dict:
             "economics": {c: money[c] for c in show},
             "sowing": {c: agro.sow_date(local[c], 2001, south).strftime("%m-%d") for c in show},
             "source": db.get("_source"),
+            "field_history": [{"year": r["year"], "name": r["name"], "crop_ids": r["crops"]}
+                              for r in ((us or {}).get("cdl") or [])][-10:] or None,
+            "field_rotation_exact": ((us or {}).get("rotation") or {}).get("exact"),
+            "county": (us or {}).get("county"),
         },
     }

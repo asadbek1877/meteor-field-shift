@@ -70,3 +70,7 @@ __pycache__/
 .venv/
 .env
 .pytest_cache/
+
+# large downloaded grids and per-point observation caches
+backend/cache/prism/
+backend/cache/obs/
