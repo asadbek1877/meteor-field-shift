@@ -75,8 +75,8 @@
   position: relative; display: inline-flex; align-items: center; gap: calc(var(--u) * 11); height: calc(var(--u) * 45); min-height: 36px;
   padding: 0 calc(var(--u) * 22); border-radius: 999px; border: 1px solid rgba(140, 190, 240, .26); color: #e8eef7; cursor: pointer;
   font: inherit; font-size: max(13px, calc(var(--u) * 16.5)); font-weight: 600;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .01) 55%), rgba(10, 26, 46, .5);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5); backdrop-filter: blur(12px) saturate(1.5);
+  /* no per-pill blur: five blurred pills over the playing video cost a GPU pass each frame */
+  background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .01) 55%), rgba(10, 26, 46, .74);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 4px 14px rgba(0, 0, 0, .25);
   transition: background-color .25s ease, border-color .25s ease, box-shadow .3s ease, color .25s ease, transform .18s var(--glass-press);
 }
@@ -257,8 +257,9 @@
 }
 @media (max-width: 640px) {
   /* the plant (at about 2/3 of the frame) is centred in the gap between the heading and the season card */
-  .ekin .crop-video-box { width: 170vw; left: calc(50vw - 170vw * .67); top: 380px; }
-  .crop-season { margin-top: 250px; }
+  /* --lead-bottom (field.js) is where the lead text ends, so the plant always starts just below the text */
+  .ekin .crop-video-box { width: 170vw; left: calc(50vw - 170vw * .67); top: calc(var(--lead-bottom, 380px) - 30px); }
+  .crop-season { margin-top: calc(53vw - 20px); }
   .crop-table-card { overflow: visible; }
   .crop-table .ct-head { display: none; }
   .crop-table .ct-row {

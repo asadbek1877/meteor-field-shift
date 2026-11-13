@@ -26,6 +26,14 @@
     setTimeout(enter, 0);
   }
 
+  /* ---------- crops page on phones: the plant video starts where the heading text ends ---------- */
+  const cropLead = document.querySelector(".crop-lead");
+  if (cropLead && "ResizeObserver" in window) {
+    const placeVideo = () => dash.style.setProperty("--lead-bottom", `${Math.round(cropLead.getBoundingClientRect().bottom - dash.getBoundingClientRect().top)}px`);
+    new ResizeObserver(placeVideo).observe(cropLead);
+    placeVideo();
+  }
+
   /* ---------- background video: loads once, loops natively, pauses when unseen ---------- */
   const video = $("dash-video");
   let videoVisible = true;

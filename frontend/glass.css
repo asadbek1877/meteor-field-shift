@@ -188,9 +188,24 @@ dialog.fullscreen-map-dialog .map-tools { --g-a: .6; --g-blur: var(--glass-blur-
 }
 .dash-panel .dash-listbox { background: rgba(12, 26, 48, .97); }
 
+/* ---------------------------------------------------------------- performance
+   Small header controls sit right over the playing background video: a backdrop blur on each of them is
+   recomputed on every video frame. The nav capsule and the sticky bar keep their blur (they carry the
+   material); the small controls keep the tint, rim and specular, slightly denser, without their own blur. */
+.dash-top :is(.dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn) {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .09) 0%, rgba(255, 255, 255, .02) 46%, rgba(255, 255, 255, 0) 100%),
+    rgba(var(--glass-rgb), .72);
+}
+/* sections below the first screen are not laid out or painted until they come near the viewport */
+#news-section, #basis-section, .clim-bottom, .crop-method, .rep .card.dash-panel[data-reveal] {
+  content-visibility: auto; contain-intrinsic-size: auto 640px;
+}
+
 /* ---------------------------------------------------------------- page entrance: background > video > header > content */
-.dash .dash-bg { animation: glass-fade .6s ease both; }
-.dash .dash-video { animation: glass-fade .9s ease .15s both; }
+.dash .dash-bg { animation: glass-fade .35s ease both; }
+.dash .dash-video { animation: glass-fade .5s ease both; }
 
 /* ---------------------------------------------------------------- idle animations stop when nothing is shown */
 .dash-loading[hidden] .dash-spinner { animation-play-state: paused; }

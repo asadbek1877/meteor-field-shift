@@ -925,8 +925,6 @@
     if ($("crop-table")) renderCropsPage();
     if (ok) {
       if ($("rotations")) renderRotations();
-      if ($("climate-card")) renderClimate();
-      if ($("crops")) renderCrops();
       if ($("now-card")) renderNow();
     }
     if ($("datasets")) renderSources();
@@ -1419,38 +1417,6 @@
     }, extra);
   }
 
-  function renderClimate() {
-    const c = data.climate, p = data.periods;
-    $("climate-meta").textContent = t("climate_meta", { b0: p.baseline[0], b1: p.baseline[1], r0: p.recent[0], r1: p.recent[1], method: c.et0_method.name });
-    const digits = { t_mean: 1, aridity: 2, t_max: 1 };
-    const tiles = ["t_mean", "precip_mm", "et0_mm", "hot_days", "dry_spell_days"].filter((k) => c.shift[k]);
-    $("kpis").innerHTML = tiles.map((k) => {
-      const s = c.shift[k], d = digits[k] || 0;
-      return `<div class="kpi"><span class="k">${esc(t("k_" + k))}</span>
-        <span class="v">${sgn(s.delta, d)} ${esc(t("unit_" + k))}</span>
-        <span class="d">${esc(t("before_now", { a: fmt(s.baseline, d), b: fmt(s.recent, d) }))}</span>
-        <span class="d">${esc(t(s.trend_significant ? "sig_yes" : "sig_no"))}</span></div>`;
-    }).join("");
-
-    const order = ["t_mean", "precip_mm", "et0_mm", "hot_days", "frost_days", "dry_spell_days", "rain_days", "aridity", "t_max"].filter((k) => c.shift[k]);
-    if (!order.includes(state.metric)) state.metric = "t_mean";
-    $("metric").innerHTML = order.map((k) => `<option value="${k}">${esc(t("k_" + k))}${t("unit_" + k) ? ", " + esc(t("unit_" + k)) : ""}</option>`).join("");
-    $("metric").value = state.metric;
-    renderAnnual();
-
-    $("legend-base").textContent = `${p.baseline[0]}–${p.baseline[1]}`;
-    $("legend-recent").textContent = `${p.recent[0]}–${p.recent[1]}`;
-    const months = t("months");
-    for (const [id, key] of [["m-t", "t"], ["m-rain", "rain_mm"], ["m-et0", "et0_mm"]]) {
-      const line = (label, values, color) => ({ label, data: values, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3 });
-      chart(id, { type: "line", data: { labels: months, datasets: [
-        line(`${p.baseline[0]}–${p.baseline[1]}`, c.monthly.baseline[key], css("--s1")),
-        line(`${p.recent[0]}–${p.recent[1]}`, c.monthly.recent[key], css("--s2")),
-      ] }, options: baseOptions() });
-    }
-    $("advice-climate").innerHTML = adviceHtml("climate");
-  }
-
   function renderAnnual() {
     const c = data.climate, key = state.metric, s = c.shift[key];
     const obs = c.annual.filter((a) => a[key] !== null).map((a) => ({ x: a.year, y: a[key] }));
@@ -1698,24 +1664,6 @@
       const d = $("crop-dialog");
       if (e.target === d || e.target.closest("[data-close-dialog]")) d.close();
     });
-  }
-
-  function renderCrops() {
-    const pill = (lv) => `<span class="pill ${lv}">${{ low: "✓", moderate: "!", high: "▲" }[lv]} ${esc(t("level_" + lv))}</span>`;
-    const head = ["th_crop", "th_season", "th_need", "th_irrig", "th_gross", "th_heat", "th_sowing", "th_level"].map((k) => `<th>${esc(t(k))}</th>`).join("");
-    $("crops").innerHTML = `<thead><tr>${head}</tr></thead><tbody>` + data.crops.map((c) => {
-      const r = c.recent, sow = c.sowing;
-      return `<tr>
-        <td><b>${esc(name(c))}</b>${c.legume ? `<span class="sub">${esc(t("legume"))}</span>` : ""}</td>
-        <td>${md(c.season.sow)} – ${md(c.season.harvest)}<span class="sub">${c.season.days} ${esc(t("unit_hot_days"))}</span></td>
-        <td class="num">${fmt(r.water_need_mm)} mm<span class="sub">${esc(t("rain_covers", { mm: fmt(r.rain_mm) }))}</span></td>
-        <td class="num">${fmt(r.irrigation_mm.p50)} mm<span class="sub">${esc(t("range", { a: fmt(r.irrigation_mm.p10), b: fmt(r.irrigation_mm.p90) }))} · ${esc(t("irrigations", { n: r.irrigations }))}${c.irrigation_change_mm !== null ? " · " + esc(t("change_since", { d: sgn(c.irrigation_change_mm) })) : ""}</span></td>
-        <td class="num">${fmt(r.irrigation_m3_ha.p50)} ${esc(t("m3ha"))}<span class="sub">${esc(t("range", { a: fmt(r.irrigation_m3_ha.p10), b: fmt(r.irrigation_m3_ha.p90) }))}</span></td>
-        <td class="num">${fmt(r.heat_days.p50)} (${fmt(r.heat_days.p10)}–${fmt(r.heat_days.p90)})<span class="sub">${esc(t("heat_rule", { thr: c.heat_rule.tmax_c }))} · ${esc(t("heat_years", { pct: Math.round(r.heat_years_share * 100), limit: c.heat_rule.limit_days }))}</span></td>
-        <td class="num">${sow ? md(sow.recent) : "–"}${sow ? `<span class="sub">${md(sow.baseline)} → ${md(sow.recent)} · ${esc(t("sowing_shift", { d: sgn(sow.shift_days) }))}</span>` : ""}</td>
-        <td>${pill(c.level)}</td></tr>`;
-    }).join("") + "</tbody>";
-    $("advice-crops").innerHTML = adviceHtml("crops");
   }
 
   function renderNow() {

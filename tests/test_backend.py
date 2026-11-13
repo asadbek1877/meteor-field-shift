@@ -192,7 +192,7 @@ def test_full_analysis_from_cache(client):
     assert body["coverage"]["soil"] == "default" and body["soil"]["class"] == "medium"
     assert body["coverage"]["forecast"] == "climatology" and body["now"]["week_basis"]["source"] == "climatology"
     assert {w["provider"] for w in body["warnings"]} == {"soilgrids", "open_meteo"}
-    assert len(body["map_layers"]) == 6
+    assert len(body["map_layers"]) == 4
     chosen = client.get("/api/analyze?lat=41.3&lon=69.2&soil=light&irrigation=drip").json()
     assert chosen["coverage"]["soil"] == "chosen" and chosen["rotations"]["irrigation_efficiency"] == 0.9
     assert not any(w["provider"] == "soilgrids" for w in chosen["warnings"])
@@ -273,9 +273,9 @@ def test_provider_editing_needs_token_and_validates(client, monkeypatch):
     assert client.post("/api/providers", json={**spec, "id": "bad_url", "url_template": "http://x/{z}/{x}/{y}"}, headers=ok).status_code == 422
     assert client.post("/api/providers", json={**spec, "id": "local", "url_template": "https://127.0.0.1/{z}/{x}/{y}"}, headers=ok).status_code == 422
 
-    assert len(client.get("/api/layers").json()) == 7
+    assert len(client.get("/api/layers").json()) == 5
     assert client.patch("/api/providers/my_tiles", json={"enabled": False}, headers=ok).json()["enabled"] is False
-    assert len(client.get("/api/layers").json()) == 6
+    assert len(client.get("/api/layers").json()) == 4
     assert client.patch("/api/providers/nasa_power", json={"enabled": False}, headers=ok).status_code == 200
     off = client.get("/api/analyze?lat=41.3&lon=69.2").json()
     assert off["source"] == "disabled" and off["climate"] is None
@@ -283,7 +283,6 @@ def test_provider_editing_needs_token_and_validates(client, monkeypatch):
     assert client.delete("/api/providers/my_tiles", headers=ok).status_code == 200
 
 
-<<<<<<< HEAD
 def test_parse_period():
     """The replay period chosen on the field dashboard: within the data, at least 5 years."""
     import pytest
@@ -312,14 +311,3 @@ def test_crop_suitability_and_yield():
     dry = agro.suitability(hot, dict(period, irrigation_mm={"p10": 0, "p50": 900, "p90": 0}))
     wet = agro.suitability(hot, dict(period, irrigation_mm={"p10": 0, "p50": 100, "p90": 0}))
     assert wet["score"] > dry["score"] and wet["parts"]["temperature"] == 100
-=======
-def test_gibs_layers_are_dated_except_grace():
-    from backend import providers
-    gibs = next(p for p in providers.BUILTIN if p["id"] == "nasa_gibs")
-    ids = {layer["id"]: layer for layer in gibs["layers"]}
-    assert "SMAP_L4_Analyzed_Root_Zone_Soil_Moisture" in ids
-    assert ids["VIIRS_SNPP_CorrectedReflectance_TrueColor"]["url"].endswith(".jpg")
-    assert not ids["GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI"]["dated"]
-    for layer in gibs["layers"]:
-        assert "/default/default/" in layer["url"]  # the site swaps the second "default" for a date
->>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f

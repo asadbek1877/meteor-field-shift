@@ -107,7 +107,7 @@
     e.preventDefault();
     try { sessionStorage.setItem(KEY, JSON.stringify({ dir, to: url.pathname, at: Date.now() })); } catch { /* fine */ }
     root.classList.add("vt-leave", "vt-" + dir);
-    setTimeout(() => { location.href = url.href; }, 260);
+    setTimeout(() => { location.href = url.href; }, 170);
   });
   // coming back from the bfcache must not leave the page half-faded
   window.addEventListener("pageshow", (e) => { if (e.persisted) root.classList.remove("vt-leave", "vt-forward", "vt-back"); });

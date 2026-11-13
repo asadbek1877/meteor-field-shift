@@ -456,7 +456,7 @@ html.dash-page {
 
 /* ---------- motion ---------- */
 .dash [data-in] { opacity: 0; }
-.dash.is-in [data-in] { animation: dash-rise var(--t-card) var(--ease) calc(var(--i, 0) * 55ms + 80ms) both; }
+.dash.is-in [data-in] { animation: dash-rise .38s var(--ease) calc(var(--i, 0) * 30ms) both; }
 .rot-list.is-fresh .rot-row { animation: dash-rise var(--t-card) var(--ease) calc(var(--i, 0) * 60ms + 60ms) both; }
 .rot-list.is-swap .rot-row { animation: dash-swap .35s ease both; }
 .dash-view { animation: dash-view var(--t-tab) var(--ease) both; }

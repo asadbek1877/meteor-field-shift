@@ -1,42 +1,22 @@
 <!doctype html>
-<<<<<<< HEAD
 <html lang="uz" class="dash-page">
-=======
-<html lang="en">
->>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TerraShift</title>
-<<<<<<< HEAD
   <meta name="description" content="Compare crop rotations for your field with 35 years of NASA climate data.">
-  <script src="/transitions.js?v=20261115"></script>
+  <script src="/transitions.js?v=20261116"></script>
   <link rel="stylesheet" href="/vendor/leaflet.css">
-  <link rel="stylesheet" href="/style.css?v=20261115">
-  <link rel="stylesheet" href="/hero.css?v=20261115">
+  <link rel="stylesheet" href="/style.css?v=20261116">
+  <link rel="stylesheet" href="/hero.css?v=20261116">
   <link rel="stylesheet" href="/fonts/fonts.css">
   <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin>
   <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-latin.woff2" crossorigin>
-  <link rel="stylesheet" href="/field.css?v=20261115">
-  <link rel="stylesheet" href="/glass.css?v=20261115">
-  <link rel="stylesheet" href="/transitions.css?v=20261115">
+  <link rel="stylesheet" href="/field.css?v=20261116">
+  <link rel="stylesheet" href="/glass.css?v=20261116">
+  <link rel="stylesheet" href="/transitions.css?v=20261116">
   <script type="speculationrules">{"prefetch": [{"where": {"selector_matches": ".dash-nav a, .site-nav a"}, "eagerness": "moderate"}]}</script>
   <link rel="preload" as="image" href="/media/space-poster.webp" fetchpriority="high">
-=======
-  <meta name="description" content="TerraShift turns 35 years of NASA climate data into a crop-rotation decision for one field: what changed, which rotation wastes the least water, and how sure we are.">
-  <meta name="theme-color" content="#04060c">
-  <meta property="og:title" content="TerraShift — the climate moved, your rotation should too">
-  <meta property="og:description" content="35 years of NASA POWER, GIBS and SMAP data turned into a field-level crop rotation verdict.">
-  <meta property="og:image" content="/media/space-poster.jpg">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.35' cy='.3'%3E%3Cstop offset='0' stop-color='%23c9dcff'/%3E%3Cstop offset='.5' stop-color='%234c6fe0'/%3E%3Cstop offset='1' stop-color='%230b1640'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12' fill='url(%23g)'/%3E%3Cellipse cx='16' cy='16' rx='15' ry='5' fill='none' stroke='%23b4c8ff' stroke-width='1.6' transform='rotate(-22 16 16)'/%3E%3C/svg%3E">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap">
-  <link rel="stylesheet" href="/vendor/leaflet.css">
-  <link rel="stylesheet" href="/terra.css">
-  <link rel="stylesheet" href="/hero.css">
-  <link rel="preload" as="image" href="/media/space-poster.jpg" fetchpriority="high">
->>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
 </head>
 <body data-page="home" data-title="page_title_home">
   <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
@@ -44,7 +24,7 @@
        (space, approach, surface). Styles in hero.css, scene controller in hero.js. -->
   <div class="journey" id="journey" data-scene="1" role="region" data-t-aria="journey_label">
     <script>(function (j) {
-      if (location.hash.length > 1 || /[?&]lat=/.test(location.search)) { j.hidden = true; return; }
+      if (location.hash === "#app") { j.hidden = true; return; }
       document.documentElement.classList.add("journey-on");
       j.classList.add("is-armed");
     })(document.currentScript.parentElement);</script>
@@ -70,10 +50,10 @@
       <div class="hero-nav" data-enter="down" style="--d: 2500">
         <a class="hero-brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span>TerraShift</a>
         <nav class="hero-links" data-t-aria="main_nav_label">
-          <a href="#rotations" data-journey-exit data-t="nav_rotations"></a>
-          <a href="#climate" data-journey-exit data-t="nav_climate"></a>
-          <a href="#crops" data-journey-exit data-t="nav_crops"></a>
-          <a href="#data" data-journey-exit data-t="nav_data"></a>
+          <a href="/rotations.html" data-t="nav_rotations"></a>
+          <a href="/climate.html" data-t="nav_climate"></a>
+          <a href="/crops.html" data-t="nav_crops"></a>
+          <a href="/sources.html" data-t="nav_sources"></a>
         </nav>
         <div class="hero-lang" role="group" data-t-aria="language_group">
           <button type="button" data-lang="uz">UZ</button>
@@ -129,13 +109,13 @@
         </h2>
         <p class="feature-lead" data-enter style="--d: 700" data-t="feature_lead"></p>
         <ul class="feature-tiles">
-          <li data-enter style="--d: 920"><a class="feature-tile is-primary" href="#verdict" data-journey-exit>
+          <li data-enter style="--d: 920"><a class="feature-tile is-primary" href="#app" data-journey-exit>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-9M12 13C12 9 9.5 6.5 5 6.5c0 4.5 2.5 6.5 7 6.5ZM12 11c0-4 2.5-6.5 7-6.5 0 4.5-2.5 6.5-7 6.5ZM6 20h12"/></svg>
             <span data-t="feature_tile_land"></span></a></li>
-          <li data-enter style="--d: 1040"><a class="feature-tile" href="#climate" data-journey-exit>
+          <li data-enter style="--d: 1040"><a class="feature-tile" href="/climate.html">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 16a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 9.2 3.5 3.5 0 0 1 17 16ZM9 19l-.5 1.5M12.5 19l-.5 1.5M16 19l-.5 1.5"/></svg>
             <span data-t="feature_tile_weather"></span></a></li>
-          <li data-enter style="--d: 1160"><a class="feature-tile" href="#impact" data-journey-exit>
+          <li data-enter style="--d: 1160"><a class="feature-tile" href="/crops.html">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg>
             <span data-t="feature_tile_resources"></span></a></li>
         </ul>
@@ -143,7 +123,6 @@
     </section>
   </div>
 
-<<<<<<< HEAD
   <!-- Field section (Dala): rotation dashboard over the satellite video.
        Styles in field.css, data rendering in app.js (renderDashboard), UI behaviour in field.js. -->
   <div id="app" class="app-shell dash" data-in-root>
@@ -160,7 +139,7 @@
     </div>
 
     <header data-shell-header></header>
-    <script src="/shell.js?v=20261115"></script>
+    <script src="/shell.js?v=20261116"></script>
     <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
 
     <main class="dash-main" id="main-content">
@@ -351,241 +330,9 @@
               <div class="chart-box"><canvas id="annual-chart" role="img" data-t-aria="trend_title"></canvas></div>
               <p class="muted small" data-t="trend_note"></p>
             </div>
-=======
-  <!-- Field app: shown after the journey, or directly with /#app (or any section anchor). -->
-  <div id="app" class="app">
-    <header class="bar">
-      <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span class="name">TerraShift</span></a>
-      <button type="button" class="place-pill" id="place-pill" data-t-aria="change_place">
-        <span class="dot busy" id="status-dot" aria-hidden="true"></span>
-        <strong id="place-name">—</strong>
-        <span class="mono" id="place-coords"></span>
-      </button>
-      <nav class="sec-nav" id="sec-nav" data-t-aria="main_nav_label">
-        <a href="#verdict" data-t="nav_verdict"></a>
-        <a href="#climate" data-t="nav_climate"></a>
-        <a href="#rotations" data-t="nav_rotations"></a>
-        <a href="#crops" data-t="nav_crops"></a>
-        <a href="#now" data-t="nav_now"></a>
-        <a href="#impact" data-t="nav_impact"></a>
-        <a href="#data" data-t="nav_data"></a>
-      </nav>
-      <div class="bar-actions">
-        <div class="seg" role="group" data-t-aria="language_group">
-          <button type="button" data-lang="en">EN</button>
-          <button type="button" data-lang="uz">UZ</button>
-        </div>
-        <button type="button" class="btn sm" id="share-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13"/></svg>
-          <span data-t="share"></span>
-        </button>
-        <button type="button" class="btn sm primary" id="print-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v5h5M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM9 13h6M9 17h6"/></svg>
-          <span data-t="report"></span>
-        </button>
-      </div>
-    </header>
-
-    <main id="main-content">
-      <div class="print-head"><strong>TerraShift — <span data-t="print_title"></span></strong><span class="mono" id="print-meta"></span></div>
-
-      <!-- 00 · field setup -->
-      <section class="setup" id="setup" aria-labelledby="passport-title">
-        <div class="map-panel">
-          <div id="map" role="application" data-t-aria="map_label"></div>
-          <div class="map-float map-search">
-            <div class="search-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-              <input id="place-search" type="search" autocomplete="off" data-t-placeholder="search_placeholder" data-t-aria="search_placeholder"
-                role="combobox" aria-autocomplete="list" aria-controls="place-results" aria-expanded="false">
-              <button type="button" class="btn icon sm" id="locate" data-t-aria="locate" data-t-title="locate">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg>
-              </button>
-            </div>
-            <ul id="place-results" class="place-results" role="listbox" hidden></ul>
-            <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
-          </div>
-          <div class="map-float map-presets" id="presets" role="group" data-t-aria="presets_label"></div>
-          <div class="map-float map-layers">
-            <div class="layer-chips" id="layer-chips" role="group" data-t-aria="map_layer"></div>
-            <div class="layer-tools" id="layer-tools" hidden>
-              <label class="layer-date" id="layer-date-wrap"><span data-t="layer_date"></span> <input type="date" id="layer-date"></label>
-              <label><span data-t="layer_opacity"></span> <input type="range" id="opacity" min="20" max="100" value="75"></label>
-              <span class="layer-legend" id="layer-legend"></span>
-            </div>
-          </div>
-        </div>
-
-        <aside class="panel passport" aria-labelledby="passport-title">
-          <div>
-            <h2 id="passport-title" data-t="passport_title"></h2>
-            <p class="sub" data-t="passport_sub"></p>
-          </div>
-          <label class="field"><span data-t="current_rotation"></span><select id="current" class="input"></select></label>
-          <div id="builder" class="builder" hidden>
-            <p class="tiny muted" data-t="builder_hint"></p>
-            <div id="builder-years" class="grid" style="gap:6px"></div>
-            <div style="display:flex;gap:6px">
-              <button type="button" id="add-year" class="btn sm" data-t="add_year"></button>
-              <button type="button" id="remove-year" class="btn sm" data-t="remove_year"></button>
-            </div>
-          </div>
-          <div class="field"><span data-t="irrigation_method"></span><div class="seg wide" id="irrigation" role="group"></div></div>
-          <div class="field"><span data-t="soil_type"></span><div class="seg wide" id="soil" role="group"></div><p id="soil-note" class="tiny muted"></p></div>
-          <div class="field"><span data-t="priorities_title"></span><div class="weights" id="weights"></div></div>
-          <label class="field"><span data-t="area_label"></span>
-            <span class="area-row"><input id="area" class="input mono" type="number" min="0.1" max="1000000" step="0.1" inputmode="decimal"><span class="muted small" data-t="hectares"></span></span>
-          </label>
-        </aside>
-      </section>
-
-      <div id="alerts" class="alerts" aria-live="polite"></div>
-      <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-
-      <!-- 01 · verdict -->
-      <section class="verdict" id="verdict" aria-labelledby="verdict-title">
-        <div class="loading-veil" aria-hidden="true">
-          <ol class="steps" id="steps">
-            <li data-t="step_power"></li>
-            <li data-t="step_et0"></li>
-            <li data-t="step_replay"></li>
-            <li data-t="step_rank"></li>
-          </ol>
-        </div>
-        <div class="verdict-top">
-          <span class="kicker" id="verdict-kicker" data-t="verdict_kicker"></span>
-          <div class="verdict-actions no-print">
-            <a class="btn sm" href="#rotations" data-t="see_all_rotations"></a>
-          </div>
-        </div>
-        <h1 id="verdict-title"><span class="skeleton">Loading the verdict for this field</span></h1>
-        <p class="lead" id="verdict-lead"></p>
-        <div class="rot-strip" id="verdict-strip"></div>
-        <div class="kpis" id="kpis"></div>
-        <ul class="advice" id="advice"></ul>
-      </section>
-
-      <!-- 02 · climate -->
-      <section class="sec" id="climate" aria-labelledby="climate-title">
-        <div class="sec-head reveal">
-          <span class="kicker" data-t="climate_kicker"></span>
-          <h2 id="climate-title"><span data-t="climate_title"></span> <span class="grad" data-t="climate_title_accent"></span></h2>
-          <p id="climate-lead"></p>
-        </div>
-        <div class="stripes-wrap reveal">
-          <canvas id="stripes" role="img"></canvas>
-          <div class="stripes-label"><h3 data-t="stripes_title"></h3><p id="stripes-sub"></p></div>
-          <div class="tip-box" id="stripes-tip" hidden></div>
-        </div>
-        <div class="stripes-axis" id="stripes-axis"></div>
-
-        <div class="time-machine reveal">
-          <div class="card">
-            <span class="label" data-t="tm_title"></span>
-            <div class="tm-year" id="tm-year">2025</div>
-            <span class="tm-mode obs" id="tm-mode"></span>
-            <div class="tm-slider"><input type="range" id="tm-range" min="1991" max="2040" value="2025" data-t-aria="tm_title"></div>
-            <div class="tm-ticks"><span>1991</span><span>2005</span><span>2025</span><span>2040</span></div>
-            <button type="button" class="btn sm tm-play" id="tm-play"><span data-t="tm_play"></span></button>
-            <p class="tiny muted" style="margin-top:12px" data-t="tm_note"></p>
-          </div>
-          <div class="tm-stats" id="tm-stats"></div>
-        </div>
-
-        <div class="ind-grid" id="indicators"></div>
-
-        <div class="charts-2">
-          <div class="card reveal">
-            <div class="card-head">
-              <div><h3 data-t="monthly_title"></h3><p class="small muted" data-t="monthly_sub"></p></div>
-              <div class="seg" id="monthly-metric" role="group"></div>
-            </div>
-            <div class="chart-box"><canvas id="monthly-chart"></canvas></div>
-          </div>
-          <div class="card reveal">
-            <div class="card-head"><div><h3 data-t="frost_title"></h3><p class="small muted" id="frost-sub"></p></div></div>
-            <div class="frost-bar" id="frost-bar"></div>
-            <div class="month-axis" id="frost-axis"></div>
-            <div class="crop-stats" id="frost-stats" style="margin-top:18px"></div>
           </div>
         </div>
       </section>
-
-      <!-- 03 · rotations -->
-      <section class="sec" id="rotations" aria-labelledby="rotations-title">
-        <div class="sec-head reveal">
-          <span class="kicker" data-t="rot_kicker"></span>
-          <h2 id="rotations-title"><span data-t="rot_title"></span> <span class="grad" data-t="rot_title_accent"></span></h2>
-          <p id="rot-lead"></p>
-        </div>
-        <div class="rot-layout">
-          <div class="rot-list" id="rot-list"></div>
-          <div class="rot-side">
-            <div class="card">
-              <div class="card-head"><div><h3 data-t="tradeoff_title"></h3><p class="small muted" data-t="tradeoff_sub"></p></div></div>
-              <div class="chart-box" style="height:320px"><canvas id="tradeoff-chart"></canvas></div>
-            </div>
-            <div class="card">
-              <h3 data-t="weights_live_title"></h3>
-              <p class="small muted" style="margin-bottom:12px" data-t="weights_live_sub"></p>
-              <div class="weights" id="weights-2"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 04 · crops -->
-      <section class="sec" id="crops" aria-labelledby="crops-title">
-        <div class="sec-head reveal">
-          <span class="kicker" data-t="crops_kicker"></span>
-          <h2 id="crops-title"><span data-t="crops_title"></span> <span class="grad" data-t="crops_title_accent"></span></h2>
-          <p data-t="crops_lead"></p>
-        </div>
-        <div class="crop-grid" id="crop-grid"></div>
-      </section>
-
-      <!-- 05 · now -->
-      <section class="sec" id="now" aria-labelledby="now-title">
-        <div class="sec-head reveal">
-          <span class="kicker" data-t="now_kicker"></span>
-          <h2 id="now-title"><span data-t="now_title"></span> <span class="grad" data-t="now_title_accent"></span></h2>
-          <p id="now-lead"></p>
-        </div>
-        <div class="now-grid" id="now-tiles"></div>
-        <div class="now-2">
-          <div class="card">
-            <div class="card-head"><div><h3 data-t="forecast_title"></h3><p class="small muted" id="forecast-sub"></p></div></div>
-            <div class="chart-box" style="height:280px"><canvas id="forecast-chart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-head"><div><h3 data-t="week_title"></h3><p class="small muted" id="week-sub"></p></div></div>
-            <div id="week"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 06 · impact -->
-      <section class="sec" id="impact" aria-labelledby="impact-title">
-        <div class="sec-head reveal">
-          <span class="kicker" data-t="impact_kicker"></span>
-          <h2 id="impact-title"><span data-t="impact_title"></span> <span class="grad" data-t="impact_title_accent"></span></h2>
-          <p id="impact-lead"></p>
-        </div>
-        <div class="impact reveal">
-          <div class="impact-controls">
-            <label class="field"><span data-t="impact_area"></span>
-              <span class="impact-area"><input id="impact-area" class="input mono" type="number" min="0.1" step="1" inputmode="decimal"><span class="muted" data-t="hectares"></span></span>
-            </label>
-            <label class="field"><span data-t="impact_scale"></span>
-              <input type="range" id="impact-range" min="0" max="100" value="20">
-            </label>
->>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
-          </div>
-          <div class="impact-grid" id="impact-grid"></div>
-          <p class="tiny muted" style="margin-top:16px" data-t="impact_note"></p>
-        </div>
-      </section>
-<<<<<<< HEAD
       </div>
 
       <!-- agricultural updates generated from this analysis (no external news provider is connected) -->
@@ -644,50 +391,13 @@
       </div>
       <div id="fullscreen-map-host" class="fullscreen-map-host"></div>
     </dialog>
-=======
-
-      <!-- 07 · data & method -->
-      <section class="sec" id="data" aria-labelledby="data-title">
-        <div class="sec-head reveal">
-          <span class="kicker" data-t="data_kicker"></span>
-          <h2 id="data-title"><span data-t="data_title"></span> <span class="grad" data-t="data_title_accent"></span></h2>
-          <p id="data-lead"></p>
-        </div>
-        <div class="data-grid" id="datasets"></div>
-        <ol class="method">
-          <li><b data-t="m1_t"></b><span data-t="m1"></span></li>
-          <li><b data-t="m2_t"></b><span data-t="m2"></span></li>
-          <li><b data-t="m3_t"></b><span data-t="m3"></span></li>
-          <li><b data-t="m4_t"></b><span data-t="m4"></span></li>
-          <li><b data-t="m5_t"></b><span data-t="m5"></span></li>
-        </ol>
-        <div class="limits">
-          <div class="card"><h3 data-t="limits_title"></h3><ul id="limits"></ul></div>
-          <div class="card"><h3 data-t="cite_title"></h3><div class="cite" id="cite"></div>
-            <p class="tiny muted" style="margin-top:12px" id="api-link"></p></div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="foot">
-      <p id="disclaimer"></p>
-      <p><span data-t="footer_made"></span> · <a href="/docs" target="_blank" rel="noopener">API</a> · <a href="https://github.com/asadbek1877/meteor-field-shift" target="_blank" rel="noopener">GitHub</a></p>
-    </footer>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
->>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
   </div>
 
   <script src="/vendor/leaflet.js"></script>
   <script src="/vendor/chart.umd.min.js"></script>
-<<<<<<< HEAD
-  <script src="/i18n.js?v=20261115"></script>
-  <script src="/app.js?v=20261115"></script>
-  <script src="/hero.js?v=20261115"></script>
-  <script src="/field.js?v=20261115"></script>
-=======
-  <script src="/i18n.js"></script>
-  <script src="/terra.js"></script>
-  <script src="/hero.js"></script>
->>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
+  <script src="/i18n.js?v=20261116"></script>
+  <script src="/app.js?v=20261116"></script>
+  <script src="/hero.js?v=20261116"></script>
+  <script src="/field.js?v=20261116"></script>
 </body>
 </html>

@@ -25,9 +25,8 @@ One server serves both the API and the site, so deployment is one service and on
 2. The server calls every enabled data source in parallel.
 3. Whatever arrived is analysed. A source that failed is reported in `warnings`
    and `providers`; the request itself still succeeds.
-4. The site draws one mission-control page: the verdict, climate shift (warming stripes,
-   1991 to 2040 time machine, indicators), rotation ranking and trade-off map, crop cards,
-   this week, impact at scale, and the data and method section.
+4. The site draws the verdict, the rotation comparison, climate charts, crop table
+   and the current-conditions block.
 
 ## Data sources
 
@@ -35,7 +34,7 @@ One server serves both the API and the site, so deployment is one service and on
 |---|---|---|
 | NASA POWER daily API | all numbers: climate shift, crop water need, rotation replay | 1991 to yesterday, 8 parameters, four parallel requests (about 3 s). Sources: MERRA-2, GEOS-IT, CERES (SRB, SYN1deg, FLASHFlux). Grid about 50 km |
 | NASA POWER monthly API | fallback when the daily request fails | day-level indicators become approximate |
-| NASA GIBS | map layers: VIIRS true colour, MODIS NDVI, MODIS land surface temperature, SMAP L4 root-zone soil moisture, GPM IMERG precipitation, GRACE water storage | images only, no numbers. Dated layers take a date from the site's date picker (`dated`, `lag_days` in `providers.py`) |
+| NASA GIBS | map layers: MODIS NDVI, MODIS land surface temperature, GPM IMERG precipitation, GRACE water storage | images only, no numbers |
 | SoilGrids (ISRIC) | soil texture, organic carbon, pH | not NASA. Did not respond from our network during development; the farmer can choose the soil type by hand |
 | Open-Meteo | 16-day forecast for the "now" block | not NASA. If it fails, the block uses NASA climatology of the same dates |
 
@@ -60,7 +59,7 @@ with `ADMIN_TOKEN` set: a map tile layer, or a JSON API that is returned as raw
 | `backend/agro.py` | crop simulation, rotation replay, soil health index, ranking |
 | `backend/texts.py` | warnings and advice in English and Uzbek |
 | `backend/crops.json`, `backend/rotations.json` | crop and rotation parameters (edit these, not the code) |
-| `frontend/` | one page: landing journey (`index.html`, `hero.css`, `hero.js`) and the mission-control app (`terra.js`, `terra.css`, `i18n.js`); Leaflet and Chart.js in `vendor/`. The old page URLs (`rotations.html`, ...) redirect to the matching section. Every setting is mirrored in the URL so an analysis can be shared |
+| `frontend/` | static pages: field setup (`index.html`), rotations, climate, crops, current conditions and sources; shared `style.css`, `app.js`, `i18n.js`, Leaflet and Chart.js in `vendor/` |
 | `tests/test_backend.py` | 16 tests, including two FAO-56 worked examples |
 
 ## Method
