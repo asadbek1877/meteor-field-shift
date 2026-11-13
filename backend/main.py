@@ -14,7 +14,7 @@ import secrets
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -23,7 +23,22 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import agro, climate, geo, nasa_client, providers, regional, store, suitability, texts
+from . import (agro, climate, geo, landcover, nasa_client, observe, providers, regional, store, suitability, terrain,
+               texts, usa, water, weekly)
+
+
+def _load_env(path: Path) -> None:
+    """KEY=value lines of the project's .env (API tokens). Values already in the environment win."""
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                key, value = line.split("=", 1)
+                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
+_load_env(Path(__file__).parent.parent / ".env")
 
 # If NASA is down, a cached point is used only when it is this close to the request.
 FALLBACK_MAX_KM = float(os.getenv("FALLBACK_MAX_KM", "150"))
@@ -195,6 +210,17 @@ def _load_series(lat: float, lon: float):
     return None, "failed", None, error
 
 
+def _week_plan(plan: dict, week_job, ensemble_job, irrigation: str, lat: float, lon: float = 0.0):
+    """This week's advice for the region's main crops; None when the forecast did not arrive."""
+    try:
+        weather = week_job.result()
+    except water.WeatherDown:
+        return None
+    obs = observe.get(lat, lon)          # ready NASA observations; the others start loading now
+    return weekly.analyze(plan, weather, ensemble_job.result(), agro.CONFIG["irrigation"][irrigation]["efficiency"],
+                          date.today(), lat, obs)
+
+
 def _try(job):
     """Result of a provider call, or the error text."""
     if job is None:
@@ -249,6 +275,13 @@ def analyze(
         layer_jobs = {p["id"]: pool.submit(providers.check, p) for p in by_kind("layers") if on(p)}
         json_jobs = {p["id"]: pool.submit(providers.fetch_json, p, lat, lon) for p in by_kind("json") if on(p)}
         cover_job = pool.submit(geo.land_cover, lat, lon, lang)
+        elevation_job = pool.submit(geo.elevation, lat, lon)
+        sat_job = pool.submit(landcover.sample, lat, lon)
+        terrain_job = pool.submit(terrain.sample, lat, lon)
+        # US fields: USDA CDL rotation history, SSURGO soil, NASS county yields (offline country check first)
+        us_job = pool.submit(usa.detail, lat, lon) if geo.country_at(lat, lon) == "US" else None
+        week_job = pool.submit(water.fetch, lat, lon, 1)          # this week's weather, for the weekly advice
+        ensemble_job = pool.submit(water.fetch_ensemble, lat, lon)
 
     warnings, statuses, extra, map_layers = [], [], {}, []
 
@@ -275,8 +308,13 @@ def analyze(
 
     # soil
     soil_info, soil_error = _try(soil_job)
+    us = us_job.result() if us_job else None
+    if us and us.get("soil") and soil == "auto":
+        soil_info, soil_error = us["soil"], None   # SSURGO is the official US soil survey: better than 250 m SoilGrids
     soil_class = soil if soil != "auto" else (soil_info or {}).get("class", "medium")
     soil_name = agro.CONFIG["soils"][soil_class]["name"][lang]
+    # water-holding numbers: from the measured texture when the soil is "auto" and SoilGrids answered
+    soil_water = agro.soil_water(soil_class, soil_info if soil == "auto" else None)
     if soil_p:
         if not on(soil_p):
             status(soil_p, "disabled")
@@ -324,13 +362,29 @@ def analyze(
         cover = cover_job.result()
     except geo.GeoDown:
         cover = None
+    try:  # 10 m satellite land cover: water, buildings, ice... seen from space
+        sat = sat_job.result()
+    except landcover.LandCoverDown:
+        sat = None
+    try:  # NASA SRTM: height and slope of the field
+        relief = terrain_job.result()
+    except terrain.TerrainDown:
+        relief = None
+    # field height: NASA SRTM, else Copernicus DEM (Open-Meteo)
+    point_elevation = (relief["elevation_m"] if relief and relief.get("elevation_m") is not None
+                       else elevation_job.result())
 
-    result = {"periods": None, "climate": None, "crops": None, "rotations": None, "now": None, "advice": None, "region": None}
-    suit = suitability.judge(cover, None, False)
+    result = {"periods": None, "climate": None, "crops": None, "rotations": None, "now": None, "advice": None,
+              "region": None, "week_plan": None}
+    suit = suitability.judge(cover, None, False, sat, relief)
     if data:
-        days = climate.prepare(data)
+        # NASA POWER temperatures are for the mean height of a ~50 km cell: move them to the field's height
+        days = climate.prepare(data, point_elevation)
+        if days.correction_c[1]:
+            warn("nasa_power", "info", msg["elevation"].format(
+                grid=round(days.grid_elevation), point=round(days.elevation), d=days.correction_c[0]))
         no_soil = data.get("resolution") == "daily" and not any(v is not None for v in days.soil[-400:])
-        suit = suitability.judge(cover, suitability.climate_facts(days), no_soil)
+        suit = suitability.judge(cover, suitability.climate_facts(days), no_soil, sat, relief)
         clim = climate.analyze(days)
     if suit["status"] == "unsuitable" and data:
         # No crop advice for a roof, a road or the sea: keep only the climate of the place.
@@ -342,7 +396,7 @@ def analyze(
     elif data:
         # What this country grows, what of it works at this point, and rotations built from that.
         iso = (cover or {}).get("country_code") or geo.country_at(lat, lon)  # offline borders if OSM is down
-        plan = regional.plan(days, iso, soil_class, irrigation)
+        plan = regional.plan(days, iso, soil_class, irrigation, soil_water["awc_mm_per_m"], us)
         field = plan["field"]
         crops = field.crops(plan["show"]) if plan["show"] else []
         rot = field.rotations(current, custom_years,
@@ -372,6 +426,7 @@ def analyze(
             "climate": clim, "crops": crops, "rotations": rot, "now": now,
             "advice": texts.advice(lang, clim, crops, rot or {"items": []}, now),
             "region": texts.region(lang, plan["profile"]),
+            "week_plan": _week_plan(plan, week_job, ensemble_job, irrigation, lat, lon),
         }
 
     quality = {"live": "full", "cache": "full", "monthly": "approx", "fallback": "approx"}.get(source, "skipped")
@@ -395,6 +450,27 @@ def analyze(
     if region_info.get("country"):
         datasets.append({"name": "FAOSTAT (FAO)", "detail": "national yield and producer price",
                          "sources": [region_info["country"]["name"]], "url": "https://www.fao.org/faostat/", "nasa": False})
+    if us:
+        if us.get("cdl"):
+            datasets.append({"name": "USDA NASS Cropland Data Layer (30 m)", "detail": "crop grown on this field every year since 2008",
+                             "sources": [f"{r['year']}: {r['name']}" for r in us["cdl"][-3:]], "nasa": False,
+                             "url": "https://nassgeodata.gmu.edu/CropScape/"})
+        if us.get("soil"):
+            datasets.append({"name": "USDA NRCS SSURGO", "detail": "soil of the field: texture, water capacity, drainage, erodibility",
+                             "sources": [us["soil"].get("component") or ""], "nasa": False,
+                             "url": "https://websoilsurvey.nrcs.usda.gov/app/"})
+        if us.get("yields"):
+            datasets.append({"name": "USDA NASS QuickStats", "detail": "county yields of the last 5 survey years",
+                             "sources": [(us.get("county") or {}).get("county", "")], "nasa": False,
+                             "url": "https://quickstats.nass.usda.gov/"})
+    if relief is not None:
+        datasets.append({"name": "NASA SRTM (30 m)", "detail": "height, slope and aspect of the field",
+                         "sources": ["SRTMGL1 via OpenTopoData"], "nasa": True,
+                         "url": "https://www.earthdata.nasa.gov/data/instruments/srtm"})
+    if sat is not None:
+        datasets.append({"name": "Sentinel-2 10 m Land Cover (Impact Observatory, Microsoft, Esri)",
+                         "detail": "what covers the ground at the point and 100 m around: water, built-up, ice, crops",
+                         "sources": [sat["center"]], "url": "https://livingatlas.arcgis.com/landcover/", "nasa": False})
     if cover is not None:
         datasets.append({"name": "OpenStreetMap (Nominatim)", "detail": "land cover at the point: building, road, water, farmland",
                          "sources": [cover["osm"]] if cover.get("osm") else [],
@@ -419,13 +495,71 @@ def analyze(
         "datasets": datasets,
         "map_layers": map_layers,
         "soil": {"class": soil_class, "name": agro.CONFIG["soils"][soil_class]["name"],
-                 "awc_mm_per_m": agro.CONFIG["soils"][soil_class]["awc_mm_per_m"], "details": soil_info},
+                 "awc_mm_per_m": soil_water["awc_mm_per_m"], "water": soil_water, "details": soil_info},
         "extra": extra,
         "suitability": texts.suitability(lang, suit),
         **result,
         "disclaimer": texts.DISCLAIMER[lang],
         "timing_ms": round((time.perf_counter() - started) * 1000),
     }
+
+
+# ---------- soil water forecast for one field ----------
+
+@app.get("/api/water")
+def water_forecast(
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
+    crop: str = Query(..., description="Crop id from /api/options"),
+    area_ha: float = Query(1.0, gt=0, le=100_000, description="Field area in hectares"),
+    sow: date | None = Query(None, description="Sowing date; default: the computed sowing date of this point"),
+    last_irrigation: date | None = Query(None, description="Last irrigation or soaking rain; makes the start exact"),
+    soil: str = Query("auto", pattern="^(auto|light|medium|heavy)$"),
+    irrigation: str = Query("furrow", pattern="^(furrow|sprinkler|drip)$"),
+):
+    """When the soil of this field dries out for the crop, and how much water it then needs.
+
+    Daily FAO-56 root-zone balance over the last irrigation and the 16-day forecast; the evaporation
+    (ET0, Penman-Monteith) is driven by sunshine, temperature, humidity and wind.
+    """
+    if crop not in agro.CROPS:
+        raise HTTPException(422, "unknown crop")
+    today = date.today()
+    if last_irrigation and not (today - timedelta(days=water.MAX_PAST_DAYS) <= last_irrigation <= today):
+        raise HTTPException(422, f"last_irrigation must be within the last {water.MAX_PAST_DAYS} days")
+    lat, lon = round(lat, 4), round(lon, 4)
+    crop_def = agro.CROPS[crop]
+    data, _source, _fb, _err = _load_series(lat, lon)
+    if data:  # sowing date and season length of THIS point
+        crop_def = agro.localize(climate.prepare(data, geo.elevation(lat, lon)), crop_def)
+    soil_class, measured = soil, None
+    if soil == "auto":
+        soil_p = next((p for p in providers.all_providers() if p["kind"] == "soil" and p["enabled"]), None)
+        try:
+            measured = providers.soil(soil_p, lat, lon) if soil_p else None
+        except providers.ProviderDown:
+            measured = None
+        soil_class = (measured or {}).get("class", "medium")
+    efficiency = agro.CONFIG["irrigation"][irrigation]["efficiency"]
+    obs = observe.get(lat, lon)          # NASA observations that are ready (the rest load in the background)
+    try:
+        return water.plan(lat, lon, crop_def, agro.soil_water(soil_class, measured), efficiency, area_ha,
+                          sow, last_irrigation, today, obs)
+    except water.WeatherDown as exc:
+        raise HTTPException(502, "Weather forecast is temporarily unavailable.") from exc
+
+
+# ---------- NASA observations at the field ----------
+
+@app.get("/api/observations")
+def observations(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180)):
+    """What NASA satellites measured at the point: SMAP soil moisture, GPM IMERG rain, GLDAS soil water
+    anomaly, MODIS and HLS vegetation (NDVI), ECOSTRESS surface temperature and evapotranspiration,
+    and OpenET in the western US. Products that are still loading say {"status": "loading"}:
+    ask again in a few seconds."""
+    products = observe.get(lat, lon)
+    pending = [p for p, v in products.items() if v.get("status") == "loading"]
+    return {"products": products, "pending": pending, "complete": not pending}
 
 
 # Serve the website from the same server (one deploy, one link).

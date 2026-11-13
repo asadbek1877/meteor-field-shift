@@ -8,7 +8,7 @@ from datetime import date, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from backend import agro, climate, geo, nasa_client, physics, providers, regional, store, suitability, texts
+from backend import agro, climate, geo, landcover, nasa_client, physics, providers, regional, store, suitability, texts
 from backend.main import app
 
 START = date(1991, 1, 1)
@@ -187,6 +187,24 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setattr(providers, "soil", provider_down)
     monkeypatch.setattr(providers, "forecast", provider_down)
     monkeypatch.setattr(geo, "land_cover", geo_down)
+    monkeypatch.setattr(geo, "elevation", lambda lat, lon: None)
+
+    def sat_down(*args, **kwargs):
+        raise landcover.LandCoverDown("land cover: ConnectTimeout")
+    monkeypatch.setattr(landcover, "sample", sat_down)
+    from backend import terrain as terrain_mod
+
+    def terrain_down(*args, **kwargs):
+        raise terrain_mod.TerrainDown("SRTM: ConnectTimeout")
+    monkeypatch.setattr(terrain_mod, "sample", terrain_down)
+    from backend import water as water_mod
+
+    def weather_down(*args, **kwargs):
+        raise water_mod.WeatherDown("Open-Meteo: ConnectTimeout")
+    monkeypatch.setattr(water_mod, "fetch", weather_down)
+    monkeypatch.setattr(water_mod, "fetch_ensemble", lambda lat, lon: [])
+    monkeypatch.setattr(providers, "SOIL_CACHE_FILE", tmp_path / "soil.json")
+    monkeypatch.setattr(providers, "_soil_disk_loaded", True)
     return TestClient(app)
 
 
@@ -198,7 +216,7 @@ def test_full_analysis_from_cache(client):
     assert body["coverage"]["soil"] == "default" and body["soil"]["class"] == "medium"
     assert body["coverage"]["forecast"] == "climatology" and body["now"]["week_basis"]["source"] == "climatology"
     assert {w["provider"] for w in body["warnings"]} == {"soilgrids", "open_meteo"}
-    assert len(body["map_layers"]) == 4
+    assert len(body["map_layers"]) == len(providers.BUILTIN[1]["layers"])
     chosen = client.get("/api/analyze?lat=41.3&lon=69.2&soil=light&irrigation=drip").json()
     assert chosen["coverage"]["soil"] == "chosen" and chosen["rotations"]["irrigation_efficiency"] == 0.9
     assert not any(w["provider"] == "soilgrids" for w in chosen["warnings"])
@@ -280,9 +298,9 @@ def test_provider_editing_needs_token_and_validates(client, monkeypatch):
     assert client.post("/api/providers", json={**spec, "id": "bad_url", "url_template": "http://x/{z}/{x}/{y}"}, headers=ok).status_code == 422
     assert client.post("/api/providers", json={**spec, "id": "local", "url_template": "https://127.0.0.1/{z}/{x}/{y}"}, headers=ok).status_code == 422
 
-    assert len(client.get("/api/layers").json()) == 5
+    assert len(client.get("/api/layers").json()) == len(providers.BUILTIN[1]["layers"]) + 1
     assert client.patch("/api/providers/my_tiles", json={"enabled": False}, headers=ok).json()["enabled"] is False
-    assert len(client.get("/api/layers").json()) == 4
+    assert len(client.get("/api/layers").json()) == len(providers.BUILTIN[1]["layers"])
     assert client.patch("/api/providers/nasa_power", json={"enabled": False}, headers=ok).status_code == 200
     off = client.get("/api/analyze?lat=41.3&lon=69.2").json()
     assert off["source"] == "disabled" and off["climate"] is None
@@ -447,3 +465,291 @@ def test_local_crop_mix_comes_from_the_province():
     region = texts.region("uz", p["profile"])
     assert region["title"].startswith("Iowa") and "MapSPAM" in region["source_text"]
     assert regional.local_cell(35.0, -40.0) is None  # open sea
+
+
+# ---------- soil water forecast ----------
+
+from backend import water  # noqa: E402
+
+TODAY = date(2026, 7, 1)
+LOAM = agro.soil_water("medium")
+
+
+def _weather(n_past, n_future, et0=6.0, rain=None, sun=25.0):
+    days = []
+    for k in range(-n_past, n_future):
+        d = TODAY + timedelta(days=k)
+        days.append({"date": d.isoformat(), "rain_mm": (rain or {}).get(k, 0.0), "rain_prob": 10, "et0_mm": et0,
+                     "sun_mj": sun, "tmax": 36.0, "tmin": 22.0, "soil_t_max": 52.0})
+    return {"days": days, "timezone": "UTC"}
+
+
+def _plan(monkeypatch, weather, members=(), crop="cotton", sow=date(2026, 4, 15), last=3, area=2.5):
+    monkeypatch.setattr(water, "fetch", lambda lat, lon, past: weather)
+    monkeypatch.setattr(water, "fetch_ensemble", lambda lat, lon: list(members))
+    last_date = TODAY - timedelta(days=last) if last is not None else None
+    return water.plan(41.3, 69.2, agro.CROPS[crop], LOAM, 0.6, area, sow, last_date, TODAY)
+
+
+def test_soil_dries_faster_under_more_sun_and_heat(monkeypatch):
+    hot = _plan(monkeypatch, _weather(3, 16, et0=7.0))
+    mild = _plan(monkeypatch, _weather(3, 16, et0=3.5))
+    assert hot["dry_on"]["expected"] < (mild["dry_on"]["expected"] or "9999")  # more evaporation, earlier dry
+    i = hot["irrigation"]
+    assert abs(i["m3_field"] - i["m3_ha"] * 2.5) <= 1.3 and abs(i["litres_field"] - i["m3_field"] * 1000) <= 100
+    assert abs(i["gross_mm"] - i["net_mm"] / 0.6) < 0.2 and hot["start_from"] == "last_irrigation"
+    assert hot["forecast_irrigation"]["times"] >= 1 and hot["method"] == "scenarios"
+
+
+def test_rain_delays_drying_and_season_is_respected(monkeypatch):
+    dry = _plan(monkeypatch, _weather(2, 16), last=2, area=1)
+    wet = _plan(monkeypatch, _weather(2, 16, rain={k: 25.0 for k in range(0, 16, 3)}), last=2, area=1)
+    assert dry["dry_on"]["expected"]
+    assert wet["dry_on"]["expected"] is None or wet["dry_on"]["expected"] > dry["dry_on"]["expected"]
+    late = _plan(monkeypatch, _weather(2, 16), sow=date(2026, 9, 1), last=None)  # not sown yet
+    assert not late["crop"]["in_field_today"] and late["dry_on"]["expected"] is None and late["irrigation"] is None
+
+
+def test_ensemble_gives_a_date_range_and_a_probability(monkeypatch):
+    base = _weather(3, 16, et0=6.0)
+    future = [d["date"] for d in base["days"] if d["date"] >= TODAY.isoformat()]
+    dry_member = {t: (0.0, 6.5) for t in future}
+    wet_member = {t: (12.0, 4.0) for t in future}                  # rain every day: never dry
+    r = _plan(monkeypatch, base, members=[dry_member] * 9 + [wet_member] * 3)
+    assert r["method"] == "ensemble" and r["members"] == 12
+    assert r["dry_on"]["earliest"] and r["dry_on"]["expected"] and r["dry_on"]["latest"] is None  # 3 of 12 stay moist
+    assert r["dry_probability"]["d16"] == 0.75 and r["forecast_rain_range_mm"][1] > 100
+    few = _plan(monkeypatch, base, members=[dry_member] * 3)       # too few members: fixed scenarios
+    assert few["method"] == "scenarios"
+
+
+def test_sun_dries_the_surface_first_and_wet_soil_evaporates_more(monkeypatch):
+    # young crop, open canopy: after a soaking the surface loses water fast, then evaporation stops
+    r = _plan(monkeypatch, _weather(0, 16, et0=7.0), sow=TODAY - timedelta(days=10), last=0)
+    days = r["days"]
+    assert days[0]["evap_mm"] > 5 and days[-1]["evap_mm"] < 0.5        # wet surface vs dry crust
+    assert days[0]["evap_mm"] > days[0]["transp_mm"]                   # seedlings: the sun takes more than the crop
+    assert r["surface_dry_on"]["expected"] and r["surface_dry_on"]["expected"] <= days[6]["date"]
+    assert days[0]["surface_pct"] > days[5]["surface_pct"]
+    # closed canopy in mid-season: the crop takes almost everything
+    mid = _plan(monkeypatch, _weather(0, 16, et0=7.0), sow=TODAY - timedelta(days=100), last=0)
+    assert mid["days"][0]["transp_mm"] > 5 * mid["days"][0]["evap_mm"]
+
+
+def test_start_of_the_balance(monkeypatch):
+    w = _weather(60, 16, et0=5.0)
+    assert _plan(monkeypatch, w, last=5)["start_from"] == "last_irrigation"
+    sown = _plan(monkeypatch, w, sow=TODAY - timedelta(days=30), last=None)
+    assert sown["start_from"] == "sowing" and sown["days_without_irrigation"] == 30
+    old = _plan(monkeypatch, w, last=None)                            # sown 77 days ago, nothing known
+    assert old["start_from"] == "history" and old["already_dry"]      # 60 dry hot days without irrigation
+
+
+# ---------- accuracy: elevation, soil texture, province yield ----------
+
+def test_temperature_is_corrected_to_the_field_elevation():
+    assert climate.elevation_correction(800, 820) == (0.0, 0.0, 0.0)              # under 100 m: no change
+    mean_c, max_c, min_c = climate.elevation_correction(786, 332)                 # field 454 m below the cell
+    assert 2.9 < max_c < 3.0 and 2.0 < min_c < 2.1 and min_c < mean_c < max_c     # nights corrected less
+    assert climate.elevation_correction(500, None) == (0.0, 0.0, 0.0)
+    data = fake_data()
+    grid, valley = climate.prepare(data), climate.prepare(data, point_elevation=0.0)  # cell is at 400 m
+    assert abs((valley.tmax[200] - grid.tmax[200]) - 2.6) < 0.01 and valley.elevation == 0.0
+    assert sum(valley.et0[:365]) > sum(grid.et0[:365])                            # warmer -> more evaporation
+
+
+def test_soil_water_from_measured_texture():
+    fc, wp = physics.saxton_rawls(40, 20, 2.5)        # loam: Saxton & Rawls (2006) table gives 28 % and 14 %
+    assert abs(fc - 0.28) < 0.01 and abs(wp - 0.14) < 0.01
+    by_class = agro.soil_water("medium")
+    assert by_class["source"] == "class" and by_class["awc_mm_per_m"] == 150
+    sandy = agro.soil_water("light", {"clay_pct": 6, "sand_pct": 85, "organic_carbon_g_kg": 4})
+    silty = agro.soil_water("medium", {"clay_pct": 15, "sand_pct": 20, "organic_carbon_g_kg": 12})
+    assert sandy["source"] == silty["source"] == "texture" and sandy["awc_mm_per_m"] < 90 < 150 < silty["awc_mm_per_m"]
+    d = climate.prepare(fake_data())
+    low = agro.Field(d, "medium", awc=60).run("cotton", 2020)
+    high = agro.Field(d, "medium", awc=190).run("cotton", 2020)
+    assert low["events"] > high["events"]             # a soil that holds less is irrigated more often
+
+
+def test_province_yield_replaces_the_national_average():
+    national = regional.economics("IN")["winter_wheat"]
+    punjab = regional.economics("IN", regional.local_cell(30.6, 75.2)["yield"])["winter_wheat"]
+    assert national["source"] == "country" and punjab["source"] == "region"
+    assert punjab["yield_t_ha"] > national["yield_t_ha"] and punjab["price_usd_t"] == national["price_usd_t"]
+    absurd = regional.economics("IN", {"whea": 80.0})["winter_wheat"]      # 20x the country: not trusted
+    assert absurd["source"] == "country"
+
+
+
+# ---------- satellite land cover: water, buildings, ice ----------
+
+def _sat(center, near=None, around=None):
+    return {"center": center, "near": near or {center: 8}, "around": around or {center: 8}, "source": "test"}
+
+
+ROAD = {"kind": None, "osm": "highway=tertiary", "name": "D010", "place": "Bostanlik", "found": True}
+
+
+@pytest.mark.parametrize("sat, cover, status, code", [
+    # the bugs: a reservoir and a hospital yard came back "fine" because OSM only knew a nearby road
+    (_sat("water"), ROAD, "unsuitable", "deep_water"),
+    (_sat("water", {"water": 3, "crops": 5}, {"crops": 8}), ROAD, "unsuitable", "water"),          # on the shore
+    (_sat("built"), {"kind": None, "osm": "amenity=hospital", "name": "City Clinic", "found": True}, "unsuitable", "built"),
+    (_sat("snow_ice"), None, "unsuitable", "glacier"),
+    (_sat("nodata"), {"kind": None, "found": False}, "unsuitable", "sea"),
+    (_sat("flooded_vegetation"), None, "limited", "wetland"),
+    (_sat("bare"), None, "limited", "bare"),
+    (_sat("crops"), ROAD, "ok", "crops_seen"),
+])
+def test_satellite_decides_water_buildings_ice(sat, cover, status, code):
+    s = suitability.judge(cover, None, False, sat)
+    assert s["status"] == status and s["reasons"][0]["code"] == code
+
+
+def test_satellite_names_and_edges():
+    hospital = suitability.judge({"kind": None, "osm": "amenity=hospital", "name": "City Clinic", "found": True}, None, False, _sat("built"))
+    assert hospital["reasons"][0]["name"] == "City Clinic"
+    lake = suitability.judge(ROAD, None, False, _sat("water"))
+    assert lake["reasons"][0]["name"] is None                  # the road's name is not the lake's name
+    edge = suitability.judge(None, None, False, _sat("crops", {"crops": 4, "water": 4}, {"crops": 8}))
+    assert edge["status"] == "ok" and any(r["code"] == "edge_water" for r in edge["reasons"])
+    # an OSM "town address" guess does not overrule a field the satellite sees
+    village = suitability.judge({"kind": "urban", "osm": "building=yes", "name": None, "found": True}, None, False, _sat("crops"))
+    assert village["status"] == "ok"
+    for lang in texts.LANGS:
+        out = texts.suitability(lang, edge)
+        assert all(item["title"] and item["detail"] for item in out["items"])
+
+
+def test_building_from_satellite_skips_crop_advice(client, monkeypatch):
+    monkeypatch.setattr(landcover, "sample", lambda lat, lon: _sat("built"))
+    body = client.get("/api/analyze?lat=41.3&lon=69.2&lang=uz").json()
+    assert body["suitability"]["status"] == "unsuitable" and body["rotations"] is None
+    assert body["suitability"]["items"][0]["title"].startswith("Bu qurilgan hudud")
+
+
+
+# ---------- this week's advice for the region's crops ----------
+
+def _week(tmax=30.0, tmin=15.0, rain=0.0, et0=6.0, ground=35.0, seed=20.0, n=7):
+    return {"days": [{"date": (TODAY + timedelta(days=k)).isoformat(), "rain_mm": rain, "rain_prob": 10, "et0_mm": et0,
+                      "sun_mj": 25.0, "tmax": tmax, "tmin": tmin, "soil_t_max": ground, "soil6_mean": seed} for k in range(n)]}
+
+
+def test_weekly_irrigation_need_and_alerts():
+    from backend import weekly
+    cotton = agro.CROPS["cotton"]
+    south = False
+    sow_day = agro.sow_date(cotton, TODAY.year, south)
+    today_mid = sow_day + timedelta(days=80)          # flowering: heat-sensitive window 60-130
+    w = _week(tmax=41.0)
+    w["days"] = [{**d, "date": (today_mid + timedelta(days=k)).isoformat()} for k, d in enumerate(w["days"])]
+    r = weekly.crop_week(cotton, today_mid, w["days"], [], 0.6, south)
+    assert r["status"] == "in_field" and r["stage"] == "mid" and r["action"] == "irrigate"
+    assert abs(r["water"]["use_mm"] - 7 * 6.0 * cotton["kc"][1]) < 0.5        # Kc mid x ET0 x 7 days
+    assert r["water"]["m3_ha"] == round(r["water"]["net_mm"] * 10 / 0.6)
+    assert r["alerts"][0]["code"] == "heat" and r["alerts"][0]["level"] == "critical"
+    wet = [{**d, "rain_mm": 8.0} for d in w["days"]]
+    assert weekly.crop_week(cotton, today_mid, wet, [], 0.6, south)["action"] == "no_irrigation"
+
+
+def test_weekly_sowing_waits_for_warm_soil_and_no_frost():
+    from backend import weekly
+    cotton = agro.CROPS["cotton"]
+    sow_day = agro.sow_date(cotton, TODAY.year, False)
+    before = sow_day - timedelta(days=5)
+    days = [{**d, "date": (before + timedelta(days=k)).isoformat()} for k, d in enumerate(_week(seed=9.0)["days"])]
+    assert weekly.crop_week(cotton, before, days, [], 0.6, False)["action"] == "wait_cold"   # soil 9 C < 14 C
+    warm = [{**d, "soil6_mean": 18.0} for d in days]
+    assert weekly.crop_week(cotton, before, warm, [], 0.6, False)["action"] == "sow"
+    frosty = [{**d, "soil6_mean": 18.0, "tmin": -2.0} for d in days]
+    assert weekly.crop_week(cotton, before, frosty, [], 0.6, False)["action"] == "wait_frost"
+
+
+def test_weekly_plan_follows_the_region_and_uses_the_ensemble():
+    from backend import weekly
+    d = climate.prepare(fake_data(lat=42.0, lon=-93.5))
+    plan = regional.plan(d, "US", "medium", "furrow")
+    week = _week()
+    members = [{x["date"]: (r, 6.0) for x in week["days"]} for r in [0.0] * 5 + [10.0] * 5]
+    w = weekly.analyze(plan, week, members, 0.75, TODAY, 42.0)
+    assert {c["id"] for c in w["crops"]} >= {"maize", "soybean"} and w["method"] == "ensemble"
+    s = w["summary"]
+    assert s["rain_range_mm"][0] == 0.0 and s["rain_range_mm"][1] == 70.0 and s["rain_5mm_probability"] == 0.5
+
+
+
+# ---------- NASA SRTM terrain ----------
+
+def test_slope_from_srtm_window():
+    from backend import terrain
+    assert terrain.slope_aspect([100.0] * 9)[0] == 0
+    # rises 3 m per 60 m to the east: 5 % slope, facing west (270 degrees)
+    slope, aspect = terrain.slope_aspect([100, 103, 106, 100, 103, 106, 100, 103, 106])
+    assert abs(slope - 5.0) < 0.01 and abs(aspect - 270) < 1
+    assert terrain.slope_class(1.5) == "flat" and terrain.slope_class(8) == "moderate" and terrain.slope_class(35) == "steep"
+
+
+def test_steep_slope_is_not_a_field():
+    steep = suitability.judge(None, None, False, _sat("rangeland"), {"class": "steep", "slope_pct": 38.0, "slope_deg": 20.8})
+    assert steep["status"] == "unsuitable" and steep["reasons"][0]["code"] == "slope_steep"
+    moderate = suitability.judge(None, None, False, _sat("crops"), {"class": "moderate", "slope_pct": 8.0, "slope_deg": 4.6})
+    assert moderate["status"] == "ok" and any(r["code"] == "slope_moderate" for r in moderate["reasons"])
+    for lang in texts.LANGS:
+        assert "38" in texts.suitability(lang, steep)["items"][0]["detail"]
+
+
+# ---------- NASA observations in the water balance ----------
+
+def test_observed_rain_and_smap_start(monkeypatch):
+    w = _weather(60, 16, et0=5.0)
+    rainy = {"status": "ok", "series": [{"date": (TODAY - timedelta(days=k)).isoformat(), "rain_mm": 30.0}
+                                        for k in range(1, 4)]}
+    dry = _plan(monkeypatch, w, last=None)                                   # 60 dry days in the model
+    monkeypatch.setattr(water, "fetch", lambda lat, lon, past: _weather(60, 16, et0=5.0))
+    wet = water.plan(41.3, 69.2, agro.CROPS["cotton"], LOAM, 0.6, 1, date(2026, 4, 15), None, TODAY,
+                     {"imerg": rainy})
+    assert wet["observed_rain_days"] == 3 and wet["days"][-17]["water_pct"] > dry["days"][-17]["water_pct"]
+    smap = {"status": "ok", "series": [{"date": (TODAY - timedelta(days=60)).isoformat(), "rootzone": 0.30, "surface": 0.30}]}
+    moist = water.plan(41.3, 69.2, agro.CROPS["cotton"], LOAM, 0.6, 1, date(2026, 4, 15), None, TODAY, {"smap": smap})
+    assert moist["start_from"] == "smap" and moist["smap_start"]["rootzone"] == 0.30
+
+
+def test_observations_without_token(monkeypatch):
+    from backend import observe
+    monkeypatch.delenv("EARTHDATA_TOKEN", raising=False)
+    out = observe.get(41.3, 69.2)
+    assert out["smap"]["status"] == "unavailable" and out["hls"]["status"] == "unavailable"
+
+
+def test_grid_positions():
+    from backend import earthdata as ed
+    assert ed.ease2_9km(41.45, 60.80) == (273, 2578)            # checked against SMAP cell_lat/cell_lon
+    assert ed.modis_sin(41.45, 60.80) == ("h22v04", 4103, 2674)
+    j, i = ed.imerg_index(41.45, 60.80)
+    assert abs(-179.95 + j * 0.1 - 60.80) <= 0.0501 and abs(-89.95 + i * 0.1 - 41.45) <= 0.0501   # half a cell
+
+
+# ---------- United States: CDL rotation, NASS units, SSURGO soil water ----------
+
+def test_field_rotation_from_cropland_data_layer():
+    from backend import usa
+    years = lambda seq: [{"year": 2016 + k, "crops": c} for k, c in enumerate(seq)]  # noqa: E731
+    assert usa.rotation_from_history(years([["maize"], ["soybean"]] * 4)) == {"years": [["maize"], ["soybean"]], "exact": True}
+    messy = years([["winter_wheat"], ["winter_wheat"], ["sorghum"], ["soybean"], ["winter_wheat"], ["sorghum"],
+                   ["soybean"], ["sorghum"], ["soybean"], ["winter_wheat"]])
+    got = usa.rotation_from_history(messy)
+    assert got["exact"] is False and got["years"] == [["sorghum"], ["soybean"], ["winter_wheat"]]
+    assert usa.rotation_from_history(years([[], [], ["maize"]])) is None          # grass and fallow do not count
+    assert usa.CDL_CROPS[26] == ["winter_wheat", "soybean"]                       # a double crop stays one year
+
+
+def test_nass_units_and_ssurgo_water():
+    from backend import usa
+    crop, kg = usa.NASS_YIELD["CORN, GRAIN - YIELD, MEASURED IN BU / ACRE"]
+    assert crop == "maize" and abs(200 * kg / 1000 / usa.ACRE_HA - 12.55) < 0.05   # 200 bu/acre = 12.6 t/ha
+    sw = agro.soil_water("medium", {"clay_pct": 26, "sand_pct": 28, "organic_carbon_g_kg": 9, "awc_mm_per_m": 167})
+    assert sw["source"] == "ssurgo" and sw["awc_mm_per_m"] == 167
+    money = regional.economics("US", None, {"maize": {"t_ha": 13.0, "level": "county", "years": [2021, 2025]}})
+    assert money["maize"]["source"] == "nass_county" and money["maize"]["yield_t_ha"] == 13.0

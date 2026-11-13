@@ -20,6 +20,8 @@ import json
 import re
 import threading
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -57,12 +59,18 @@ BUILTIN = [
         "id": "nasa_gibs", "name": "NASA GIBS", "kind": "layers", "builtin": True, "nasa": True,
         "feeds": ["map"],
         "docs": "https://nasa-gibs.github.io/gibs-api-docs/",
-        "description": "Satellite map layers: vegetation, land temperature, precipitation, water storage",
+        "description": "Satellite map layers: vegetation (MODIS, VIIRS), land temperature, precipitation (GPM IMERG), soil moisture (SMAP, GLDAS), water storage (GRACE), terrain (SRTM)",
         "layers": [
             _gibs("MODIS_Terra_L3_NDVI_16Day", {"en": "Vegetation NDVI (MODIS Terra)", "uz": "O'simlik yashilligi NDVI (MODIS Terra)"}, "GoogleMapsCompatible_Level9", "vegetation"),
             _gibs("MODIS_Terra_L3_Land_Surface_Temp_8Day_Day", {"en": "Land surface temperature (MODIS Terra)", "uz": "Yer sirti harorati (MODIS Terra)"}, "GoogleMapsCompatible_Level7", "heat"),
             _gibs("IMERG_Precipitation_Rate", {"en": "Precipitation (GPM IMERG)", "uz": "Yog'in (GPM IMERG)"}, "GoogleMapsCompatible_Level6", "water"),
             _gibs("GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI", {"en": "Water storage (GRACE)", "uz": "Suv zaxirasi (GRACE)"}, "GoogleMapsCompatible_Level6", "water"),
+            _gibs("SMAP_L4_Analyzed_Root_Zone_Soil_Moisture", {"en": "Root-zone soil moisture (SMAP L4)", "uz": "Ildiz qatlami tuproq namligi (SMAP L4)"}, "GoogleMapsCompatible_Level6", "water"),
+            _gibs("SMAP_L3_Passive_Day_Soil_Moisture", {"en": "Surface soil moisture (SMAP L3)", "uz": "Yuza tuproq namligi (SMAP L3)"}, "GoogleMapsCompatible_Level6", "water"),
+            _gibs("GLDAS_Underground_Soil_Moisture_Monthly", {"en": "Soil moisture, monthly (GLDAS)", "uz": "Tuproq namligi, oylik (GLDAS)"}, "GoogleMapsCompatible_Level6", "water"),
+            _gibs("VIIRS_SNPP_NDVI_8Day", {"en": "Vegetation NDVI, 8-day (VIIRS)", "uz": "O'simlik yashilligi NDVI, 8 kunlik (VIIRS)"}, "GoogleMapsCompatible_Level8", "vegetation"),
+            _gibs("MODIS_Terra_Land_Surface_Temp_Day", {"en": "Land surface temperature, daily (MODIS Terra)", "uz": "Yer sirti harorati, kunlik (MODIS Terra)"}, "GoogleMapsCompatible_Level7", "heat"),
+            _gibs("SRTM_Color_Index", {"en": "Terrain height (SRTM)", "uz": "Relyef balandligi (SRTM)"}, "GoogleMapsCompatible_Level12", "terrain"),
         ],
     },
     {
@@ -214,14 +222,17 @@ def _fetch(provider: dict, lat: float, lon: float):
         raise ProviderDown(f"{down[1]} (skipped, retry in {int(down[0] - time.time())} s)")
     url = provider["url_template"].replace("{lat}", str(lat)).replace("{lon}", str(lon))
     try:
-        resp = _client.get(url)
+        # SoilGrids often needs about 10 s; it is fetched in the background (see soil()), so it may take longer
+        resp = _client.get(url, timeout=SOIL_TIMEOUT_S if provider.get("kind") == "soil" else TIMEOUT_S)
         resp.raise_for_status()
         if len(resp.content) > JSON_MAX_BYTES:
             raise ValueError("response too large")
         body = resp.json()
     except (httpx.HTTPError, ValueError) as exc:
         reason = type(exc).__name__
-        _down_until[provider["id"]] = (time.time() + DOWN_TTL_S, reason)
+        # soil is fetched in the background and costs the request nothing, so it may be retried sooner
+        ttl = SOIL_DOWN_TTL_S if provider.get("kind") == "soil" else DOWN_TTL_S
+        _down_until[provider["id"]] = (time.time() + ttl, reason)
         raise ProviderDown(reason) from exc
     _down_until.pop(provider["id"], None)
     return body
@@ -265,15 +276,72 @@ def check(provider: dict, force: bool = False) -> dict:
 
 # ---------- soil ----------
 
+SOIL_TIMEOUT_S = 25
+SOIL_DOWN_TTL_S = 120
+SOIL_WAIT_S = 3.5          # a request waits this long; the fetch itself goes on in the background
+SOIL_CACHE_FILE = Path(__file__).parent / "cache" / "soil.json"
 _soil_cache: dict[tuple, dict] = {}
+_soil_jobs: dict[tuple, Future] = {}
+_soil_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="soil")
+_soil_disk_loaded = False
+
+
+def _soil_from_disk() -> None:
+    """Soil does not change, so every answer is kept on disk and survives restarts."""
+    global _soil_disk_loaded
+    if _soil_disk_loaded:
+        return
+    _soil_disk_loaded = True
+    try:
+        for key, value in json.loads(SOIL_CACHE_FILE.read_text(encoding="utf-8")).items():
+            lat, lon = key.split("_")
+            _soil_cache.setdefault((float(lat), float(lon)), value)
+    except (OSError, ValueError):
+        pass
+
+
+def _soil_to_disk() -> None:
+    try:
+        SOIL_CACHE_FILE.parent.mkdir(exist_ok=True)
+        SOIL_CACHE_FILE.write_text(json.dumps({f"{k[0]}_{k[1]}": v for k, v in _soil_cache.items()},
+                                              ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
 
 
 def soil(provider: dict, lat: float, lon: float) -> dict:
-    """Topsoil (0-30 cm) texture, organic carbon and pH from SoilGrids."""
+    """Topsoil (0-30 cm) texture, organic carbon and pH from SoilGrids.
+
+    SoilGrids is slow (often 10 s). The request waits SOIL_WAIT_S; if the answer is not there yet the
+    fetch continues in the background and is cached, so the next analysis of the place has the soil.
+    """
     key = (round(lat, 2), round(lon, 2))
-    if key in _soil_cache:
-        return _soil_cache[key]
-    body = _fetch(provider, lat, lon)
+    with _lock:
+        _soil_from_disk()
+        if key in _soil_cache:
+            return _soil_cache[key]
+        job = _soil_jobs.get(key)
+        if job is None:
+            job = _soil_jobs[key] = _soil_pool.submit(_soil_fetch, provider, lat, lon, key)
+    try:
+        return job.result(timeout=SOIL_WAIT_S)
+    except FutureTimeout:
+        raise ProviderDown("slow answer, still loading: the next analysis of this place will have the soil") from None
+
+
+def _soil_fetch(provider: dict, lat: float, lon: float, key: tuple) -> dict:
+    try:
+        result = _soil_parse(_fetch(provider, lat, lon))
+        with _lock:
+            _soil_cache[key] = result
+            _soil_to_disk()
+        return result
+    finally:
+        with _lock:
+            _soil_jobs.pop(key, None)
+
+
+def _soil_parse(body) -> dict:
     values = {}
     try:
         for layer in body.get("properties", {}).get("layers", []):
@@ -296,7 +364,6 @@ def soil(provider: dict, lat: float, lon: float) -> dict:
         "ph": round(values["phh2o"], 1) if "phh2o" in values else None,
         "depth_cm": "0-30", "source": "SoilGrids 2.0 (ISRIC), 250 m",
     }
-    _soil_cache[key] = result
     return result
 
 

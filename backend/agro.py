@@ -20,7 +20,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from .climate import BASELINE, RECENT, Days, _in, _mmdd
-from .physics import mean, percentile, rnd, spread
+from .physics import mean, percentile, rnd, saxton_rawls, spread
 
 _DIR = Path(__file__).parent
 CONFIG = json.loads((_DIR / "crops.json").read_text(encoding="utf-8"))
@@ -32,6 +32,37 @@ RESIDUE_SCORE = {"low": 30, "medium": 60, "high": 100}
 SOIL_WEIGHTS = {"legumes": 0.30, "diversity": 0.20, "cover": 0.20, "residue": 0.20, "perennial": 0.10}
 DEFAULT_WEIGHTS = {"water": 40, "income": 20, "soil": 20, "risk": 20}
 OVERLAP_TOLERANCE_DAYS = 14
+
+
+# ---------- soil ----------
+
+# field capacity and wilting point (m3/m3) and readily evaporable water (mm) of the three soil classes,
+# FAO-56 Table 19; fc - wp matches awc_mm_per_m in crops.json
+SOIL_CLASS_WATER = {"light": (0.17, 0.07, 6.0), "medium": (0.30, 0.15, 9.0), "heavy": (0.40, 0.22, 10.0)}
+EVAPORATION_LAYER_M = 0.10
+
+
+def soil_water(soil_class: str, measured: dict | None = None) -> dict:
+    """Water-holding numbers of the soil: from the measured texture when there is one, else from the class.
+
+    measured: SoilGrids result with clay_pct, sand_pct and organic_carbon_g_kg (see providers.soil).
+    -> {"fc", "wp" m3/m3, "awc_mm_per_m", "rew_mm", "tew_mm", "source": "texture" | "class"}
+    """
+    soil_class = soil_class if soil_class in SOIL_CLASS_WATER else "medium"
+    fc, wp, rew = SOIL_CLASS_WATER[soil_class]
+    source = "class"
+    if measured and measured.get("clay_pct") is not None and measured.get("sand_pct") is not None:
+        soc = measured.get("organic_carbon_g_kg")
+        om = soc * 1.724 / 10 if soc is not None else 1.5   # organic carbon g/kg -> organic matter %
+        fc_m, wp_m = saxton_rawls(measured["sand_pct"], measured["clay_pct"], om)
+        if 0.03 <= fc_m - wp_m <= 0.25 and 0.02 <= wp_m < fc_m <= 0.55:  # physically sensible
+            fc, wp, source = fc_m, wp_m, "texture"
+    awc = round(1000 * (fc - wp))
+    # USDA SSURGO measures the available water capacity of the root zone itself: use it as it is
+    if measured and measured.get("awc_mm_per_m") and 30 <= measured["awc_mm_per_m"] <= 300:
+        awc, source = measured["awc_mm_per_m"], "ssurgo"
+    return {"fc": round(fc, 3), "wp": round(wp, 3), "awc_mm_per_m": awc,
+            "rew_mm": rew, "tew_mm": round(1000 * (fc - 0.5 * wp) * EVAPORATION_LAYER_M, 1), "source": source}
 
 
 # ---------- single crop ----------
@@ -210,11 +241,12 @@ class Field:
     """
 
     def __init__(self, d: Days, soil: str = "medium", irrigation: str = "furrow",
-                 crops: dict | None = None, revenue: dict | None = None):
+                 crops: dict | None = None, revenue: dict | None = None, awc: float | None = None):
         self.d = d
         self.soil = soil if soil in CONFIG["soils"] else "medium"
         self.method = irrigation if irrigation in CONFIG["irrigation"] else "furrow"
-        self.awc = CONFIG["soils"][self.soil]["awc_mm_per_m"]
+        # awc: available water capacity from the measured texture (soil_water); else the class value
+        self.awc = awc or CONFIG["soils"][self.soil]["awc_mm_per_m"]
         self.efficiency = CONFIG["irrigation"][self.method]["efficiency"]
         self.lib = crops or CROPS
         self.revenue = revenue or {}

@@ -276,3 +276,42 @@ def country_at(lat: float, lon: float) -> str | None:
                 if _in_ring(x, y, rings[0]) and not any(_in_ring(x, y, h) for h in rings[1:]):
                     return c["iso"]
     return None
+
+
+# ---------- elevation of a point ----------
+
+ELEVATION_API = "https://api.open-meteo.com/v1/elevation"   # Copernicus DEM, 90 m
+ELEVATION_FILE = Path(__file__).parent / "cache" / "elevation.json"
+_elevation: dict[str, float] | None = None
+_elevation_lock = threading.Lock()
+
+
+def elevation(lat: float, lon: float) -> float | None:
+    """Height of the point above sea level in metres, or None when the service does not answer.
+
+    Kept on disk: terrain does not change, and the climate analysis must not depend on this call.
+    """
+    global _elevation
+    key = f"{round(lat, 3)}_{round(lon, 3)}"
+    with _elevation_lock:
+        if _elevation is None:
+            try:
+                _elevation = json.loads(ELEVATION_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                _elevation = {}
+        if key in _elevation:
+            return _elevation[key]
+    try:
+        r = _client.get(ELEVATION_API, params={"latitude": lat, "longitude": lon}, timeout=4)
+        r.raise_for_status()
+        value = float(r.json()["elevation"][0])
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+        return None
+    with _elevation_lock:
+        _elevation[key] = value
+        try:
+            ELEVATION_FILE.parent.mkdir(exist_ok=True)
+            ELEVATION_FILE.write_text(json.dumps(_elevation), encoding="utf-8")
+        except OSError:
+            pass
+    return value

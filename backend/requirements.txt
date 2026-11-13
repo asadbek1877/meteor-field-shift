@@ -1,3 +1,5 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 httpx>=0.27
+h5py>=3.12   # NASA Earthdata OPeNDAP subsets (SMAP, IMERG, GLDAS, MODIS)
+rasterio>=1.4   # NASA HLS / ECOSTRESS cloud GeoTIFFs, PRISM grids, CDL projection

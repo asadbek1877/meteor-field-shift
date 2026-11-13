@@ -6,9 +6,10 @@ Output, so a point can be answered offline:
   cells    0.25 degree cells -> [region id of each of the 3x3 native 5' pixels (-1 = no crops),
            [[region id, cropland ha, top crops [[crop index, ha], ...]], ...] one entry per region]
            A cell on a border keeps each side apart, so a point gets the crops of its own province.
-  regions  admin-1 regions (province / oblast / state) -> name, country and hectares per crop
-Run from the repository root (the zip is the file downloaded from Dataverse):
-  python -m backend.tools.build_local_crops spam2020V2r2_global_harvested_area.csv.zip
+  regions  admin-1 regions (province / oblast / state) -> name, country, hectares per crop and, when the
+           production file is given, the yield of the province in t/ha (production / harvested area)
+Run from the repository root (the zips are the files downloaded from Dataverse):
+  python -m backend.tools.build_local_crops spam2020V2r2_global_harvested_area.csv.zip       spam2020V2r2_global_production.csv.zip
 """
 from __future__ import annotations
 
@@ -50,7 +51,28 @@ def _member(z: zipfile.ZipFile) -> str:
     raise SystemExit(f"cannot pick the all-technologies table among: {names}")
 
 
-def build(zip_path: str) -> dict:
+MIN_YIELD_HA = 500   # a province yield from less harvested area than this is too noisy to use
+
+
+def _production(zip_path: str) -> dict[str, dict[str, float]]:
+    """region id -> crop code -> tonnes produced (MapSPAM production, all technologies)."""
+    z = zipfile.ZipFile(zip_path)
+    reader = csv.DictReader(io.TextIOWrapper(z.open(_member(z)), encoding="utf-8-sig", errors="replace"))
+    cols = {c.lower(): c for c in reader.fieldnames or []}
+    crop_cols = [c for c in reader.fieldnames if c.lower() not in _META_COLS]
+    a0, a1 = cols.get("adm0_name"), cols.get("adm1_name")
+    f0 = cols.get("fips0") or cols.get("iso3")
+    out: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for row in reader:
+        acc = out[f"{row.get(f0, '')}|{row.get(a0, '')}|{row.get(a1, '')}"]
+        for c in crop_cols:
+            v = row[c]
+            if v and v != "0.0":
+                acc[c.lower()] += float(v)
+    return out
+
+
+def build(zip_path: str, production_zip: str | None = None) -> dict:
     z = zipfile.ZipFile(zip_path)
     reader = csv.DictReader(io.TextIOWrapper(z.open(_member(z)), encoding="utf-8-sig", errors="replace"))
     cols = {c.lower(): c for c in reader.fieldnames or []}
@@ -104,10 +126,15 @@ def build(zip_path: str) -> dict:
                        key=lambda kv: kv[1], default=None)
             if best:
                 entry[0][sub] = best[0]
+    tonnes = _production(production_zip) if production_zip else {}
     out_regions = []
     for rid in sorted(regions):
         ha = region_ha[rid]
-        out_regions.append({**regions[rid], "ha": {crops[i]: round(v) for i, v in enumerate(ha) if v >= 1}})
+        entry = {**regions[rid], "ha": {crops[i]: round(v) for i, v in enumerate(ha) if v >= 1}}
+        if rid in tonnes:
+            entry["yield"] = {crops[i]: round(tonnes[rid][crops[i]] / v, 2) for i, v in enumerate(ha)
+                              if v >= MIN_YIELD_HA and tonnes[rid].get(crops[i], 0) > 0}
+        out_regions.append(entry)
     return {
         "_source": "MapSPAM 2020 v2r2 (IFPRI), harvested area, all technologies, 5 arc-minute grid; "
                    f"cells aggregated to {CELL} degree. doi:10.7910/DVN/SWPENT",
@@ -116,7 +143,7 @@ def build(zip_path: str) -> dict:
 
 
 if __name__ == "__main__":
-    data = build(sys.argv[1])
+    data = build(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)
     OUT.parent.mkdir(exist_ok=True)
     with gzip.open(OUT, "wt", encoding="utf-8") as f:
         json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
