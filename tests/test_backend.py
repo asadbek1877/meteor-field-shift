@@ -111,7 +111,7 @@ def test_warming_raises_water_need():
     warm = agro.Field(climate.prepare(fake_data(warming=0.08))).crops()
     need = lambda rows: next(c for c in rows if c["id"] == "cotton")["recent"]["water_need_mm"]
     assert need(warm) > need(cool)
-    assert len(cool) == 6
+    assert len(cool) == len(agro.CONFIG["crops"])
 
 
 def test_rotations_ranking_follows_priorities():
@@ -188,11 +188,11 @@ def client(monkeypatch, tmp_path):
 def test_full_analysis_from_cache(client):
     body = client.get("/api/analyze?lat=41.3&lon=69.2&lang=uz").json()
     assert body["source"] == "cache" and body["coverage"]["rotations"] == "full"
-    assert body["rotations"]["best_id"] and len(body["crops"]) == 6 and body["advice"]
+    assert body["rotations"]["best_id"] and len(body["crops"]) == len(agro.CONFIG["crops"]) and body["advice"]
     assert body["coverage"]["soil"] == "default" and body["soil"]["class"] == "medium"
     assert body["coverage"]["forecast"] == "climatology" and body["now"]["week_basis"]["source"] == "climatology"
     assert {w["provider"] for w in body["warnings"]} == {"soilgrids", "open_meteo"}
-    assert len(body["map_layers"]) == 4
+    assert len(body["map_layers"]) == 6
     chosen = client.get("/api/analyze?lat=41.3&lon=69.2&soil=light&irrigation=drip").json()
     assert chosen["coverage"]["soil"] == "chosen" and chosen["rotations"]["irrigation_efficiency"] == 0.9
     assert not any(w["provider"] == "soilgrids" for w in chosen["warnings"])
@@ -258,7 +258,7 @@ def test_custom_rotation_and_validation(client):
     assert client.get("/api/analyze?lat=41.3&lon=69.2&custom=banana").status_code == 422
     assert client.get("/api/analyze?lat=91&lon=0").status_code == 422
     assert client.get("/api/analyze?lat=41.3&lon=69.2&w_water=0&w_income=0&w_soil=0&w_risk=0").status_code == 200
-    assert len(client.get("/api/options").json()["crops"]) == 6
+    assert len(client.get("/api/options").json()["crops"]) == len(agro.CONFIG["crops"])
 
 
 def test_provider_editing_needs_token_and_validates(client, monkeypatch):
@@ -273,11 +273,53 @@ def test_provider_editing_needs_token_and_validates(client, monkeypatch):
     assert client.post("/api/providers", json={**spec, "id": "bad_url", "url_template": "http://x/{z}/{x}/{y}"}, headers=ok).status_code == 422
     assert client.post("/api/providers", json={**spec, "id": "local", "url_template": "https://127.0.0.1/{z}/{x}/{y}"}, headers=ok).status_code == 422
 
-    assert len(client.get("/api/layers").json()) == 5
+    assert len(client.get("/api/layers").json()) == 7
     assert client.patch("/api/providers/my_tiles", json={"enabled": False}, headers=ok).json()["enabled"] is False
-    assert len(client.get("/api/layers").json()) == 4
+    assert len(client.get("/api/layers").json()) == 6
     assert client.patch("/api/providers/nasa_power", json={"enabled": False}, headers=ok).status_code == 200
     off = client.get("/api/analyze?lat=41.3&lon=69.2").json()
     assert off["source"] == "disabled" and off["climate"] is None
     assert client.delete("/api/providers/nasa_power", headers=ok).status_code == 422
     assert client.delete("/api/providers/my_tiles", headers=ok).status_code == 200
+
+
+<<<<<<< HEAD
+def test_parse_period():
+    """The replay period chosen on the field dashboard: within the data, at least 5 years."""
+    import pytest
+    from backend import agro
+    assert agro.parse_period(None) is None
+    assert agro.parse_period("2016-2025") == (2016, 2025)
+    for bad in ("1980-2025", "2023-2025", "2016-2030"):
+        with pytest.raises(ValueError):
+            agro.parse_period(bad)
+
+
+def test_crop_suitability_and_yield():
+    rows = agro.Field(climate.prepare(fake_data())).crops()
+    by = {c["id"]: c for c in rows}
+    assert {"maize", "soybean", "sunflower", "tomato", "potato"} <= set(by)
+    assert {c["category"] for c in rows} == {"grain", "technical", "legume", "vegetable"}
+    for c in rows:
+        s = c["suitability"]
+        assert 0 <= s["score"] <= 100 and set(s["parts"]) <= {"temperature", "stress", "water"}
+        y = c["yield_t_ha"]
+        assert y["low"] <= y["high"] and y["high"] <= y["typical"][1]          # stress can only lower the yield
+        assert c["recent"]["mid_t_c"] is not None
+    # a crop that needs less irrigation scores higher on water, everything else equal
+    hot = dict(agro.CROPS["cotton"], t_opt_c=[-50, 50])
+    period = dict(by["cotton"]["recent"], stress=0.0)
+    dry = agro.suitability(hot, dict(period, irrigation_mm={"p10": 0, "p50": 900, "p90": 0}))
+    wet = agro.suitability(hot, dict(period, irrigation_mm={"p10": 0, "p50": 100, "p90": 0}))
+    assert wet["score"] > dry["score"] and wet["parts"]["temperature"] == 100
+=======
+def test_gibs_layers_are_dated_except_grace():
+    from backend import providers
+    gibs = next(p for p in providers.BUILTIN if p["id"] == "nasa_gibs")
+    ids = {layer["id"]: layer for layer in gibs["layers"]}
+    assert "SMAP_L4_Analyzed_Root_Zone_Soil_Moisture" in ids
+    assert ids["VIIRS_SNPP_CorrectedReflectance_TrueColor"]["url"].endswith(".jpg")
+    assert not ids["GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI"]["dated"]
+    for layer in gibs["layers"]:
+        assert "/default/default/" in layer["url"]  # the site swaps the second "default" for a date
+>>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f

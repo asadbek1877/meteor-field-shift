@@ -47,6 +47,7 @@
     ui1.inert = n !== 1;
     ui3.inert = n !== 3;
     journey.classList.toggle("is-data", n === 3 && surface.currentTime > DATA_AT);
+    if (n === 3) document.dispatchEvent(new CustomEvent("journey:surface"));
   };
   const load = (video) => {
     if (video.getAttribute("src") || !video.dataset.src) return;
@@ -185,9 +186,14 @@
     alive = false;
     journey.classList.add("is-done");
     root.classList.remove("journey-on");
+    document.dispatchEvent(new CustomEvent("journey:exit"));
     if (app) app.inert = false;
-    history.replaceState(null, "", "#app");
+    const target = (event.currentTarget && event.currentTarget.hash) || "#app";
+    history.replaceState(null, "", target);
     window.scrollTo(0, 0);
+    const section = target !== "#app" && document.querySelector(target);
+    if (section) setTimeout(() => section.scrollIntoView({ behavior: "smooth" }), 400);
+    window.dispatchEvent(new Event("terrashift:app-visible"));
     const main = document.getElementById("main-content");
     if (main) { main.setAttribute("tabindex", "-1"); main.focus({ preventScroll: true }); }
     setTimeout(() => {
@@ -274,9 +280,13 @@
     if (!motion()) return;
     load(space);
     start(space);
-    /* warm the next two clips in order, so "Boshlash" never waits on the network */
-    ready(space, 4, 6000).then(() => { load(approach); return ready(approach, 4, 20000); }).then(() => load(surface));
+    /* warm only the next clip; the last one (16 MB) loads once the visitor shows intent to start,
+       so people who skip the journey never download it. It still has the whole approach clip to arrive,
+       and its poster (= its first frame) covers a slow network. */
+    ready(space, 4, 6000).then(() => load(approach));
   };
+  const intent = () => { load(approach); load(surface); };
+  ["pointerenter", "focus", "touchstart"].forEach((e) => startButton.addEventListener(e, intent, { once: true, passive: true }));
   const poster = new Image();
   poster.onload = poster.onerror = arrive;
   poster.src = space.poster;

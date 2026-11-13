@@ -39,6 +39,7 @@ class Days:
     spans: dict              # year -> (first index, last index + 1) for complete years
     pm_share: float          # share of days where Penman-Monteith could be used
     gaps: int                # days filled from the previous day
+    rh: list | None = None   # relative humidity at 2 m in %, None where missing
 
     @property
     def daily(self) -> bool:
@@ -118,7 +119,7 @@ def prepare(data: dict) -> Days:
             spans[y] = (i0, i1)
 
     days = Days(lat, data["lon"], elev, data.get("resolution", "daily"), start, n, t, tmax, tmin,
-                rain, et0, soil, year, doy, spans, pm_days / n if n else 0.0, gaps)
+                rain, et0, soil, year, doy, spans, pm_days / n if n else 0.0, gaps, list(rh[:n]))
     with _prepared_lock:  # requests run in parallel threads
         if len(_prepared) > 24:
             _prepared.pop(next(iter(_prepared)), None)

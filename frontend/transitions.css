@@ -1,0 +1,46 @@
+/* Directional page transitions (see transitions.js). The page and its own background move together;
+   the shared header stays and the active navigation pill glides to its new place. */
+
+@view-transition { navigation: auto; }
+
+/* What moves as one scene, and what stays. */
+/* The page is the root snapshot (viewport-sized, cheap to capture); naming the whole scrolling .dash would
+   make the browser capture a very tall texture on every navigation. */
+.dash-top { view-transition-name: dalaviy-header; }
+
+:root { --vt-ease-out: cubic-bezier(.55, 0, .75, .2); --vt-ease-in: cubic-bezier(.22, 1, .36, 1); }
+
+/* forward: the current page leaves to the left, the next one comes in from the right */
+html:active-view-transition-type(forward)::view-transition-old(dalaviy-page),
+html:active-view-transition-type(forward)::view-transition-old(root) { animation: vt-out-left .32s var(--vt-ease-out) both; }
+html:active-view-transition-type(forward)::view-transition-new(dalaviy-page),
+html:active-view-transition-type(forward)::view-transition-new(root) { animation: vt-in-right .5s var(--vt-ease-in) .05s both; }
+/* back: the reverse */
+html:active-view-transition-type(back)::view-transition-old(dalaviy-page),
+html:active-view-transition-type(back)::view-transition-old(root) { animation: vt-out-right .32s var(--vt-ease-out) both; }
+html:active-view-transition-type(back)::view-transition-new(dalaviy-page),
+html:active-view-transition-type(back)::view-transition-new(root) { animation: vt-in-left .5s var(--vt-ease-in) .05s both; }
+
+/* the header crossfades in place; the active pill moves between positions */
+::view-transition-group(dalaviy-header) { animation-duration: .45s; }
+::view-transition-group(dalaviy-nav-active) { animation-duration: .45s; animation-timing-function: var(--vt-ease-in); }
+::view-transition-image-pair(dalaviy-page) { isolation: isolate; }
+
+@keyframes vt-out-left { to { transform: translateX(-14%); opacity: 0; } }
+@keyframes vt-out-right { to { transform: translateX(14%); opacity: 0; } }
+@keyframes vt-in-right { from { transform: translateX(16%); opacity: 0; } }
+@keyframes vt-in-left { from { transform: translateX(-16%); opacity: 0; } }
+
+/* ---------- fallback (no cross-document View Transitions) ---------- */
+html { background: #040a15; }
+html.vt-leave body { pointer-events: none; }
+html.vt-leave.vt-forward body { animation: vt-out-left .26s var(--vt-ease-out) both; }
+html.vt-leave.vt-back body { animation: vt-out-right .26s var(--vt-ease-out) both; }
+html.vt-enter.vt-forward body { animation: vt-in-right .55s var(--vt-ease-in) both; }
+html.vt-enter.vt-back body { animation: vt-in-left .55s var(--vt-ease-in) both; }
+html.vt-leave, html.vt-enter { overflow-x: clip; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  html.vt-leave body, html.vt-enter body { animation: none !important; }
+}

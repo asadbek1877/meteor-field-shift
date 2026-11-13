@@ -1,11 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "apple-design": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "skillPath": "skills/apple-design/SKILL.md",
+      "computedHash": "118d450c2d6ca54fee5f56cf8883fa3231bc2d917bb8f5a3f87488162c55fac9"
+    },
     "better-ui": {
       "source": "jakubkrehel/skills",
       "sourceType": "github",
       "skillPath": "skills/better-ui/SKILL.md",
-      "computedHash": "4d6e56d526c674b1f21a5acfab1599627e9d829d225e728e52b5bd9fb1005b9d"
+      "computedHash": "36417d09a0d91fb8c8cbbbeeb14f0ac0c0d4399342d80bcec02c8c446ebadce3"
     }
   }
 }

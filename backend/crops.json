@@ -1,5 +1,5 @@
 {
-  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22, with sowing dates typical for Uzbekistan. Heat and frost thresholds, residue classes and revenue_usd_ha (typical yield x price) are placeholders: Mizuki must verify each one and add a source before the demo.",
+  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22, with sowing dates typical for Uzbekistan. Heat and frost thresholds, residue classes and revenue_usd_ha (typical yield x price) are placeholders: Mizuki must verify each one and add a source before the demo. Added for the crops page: maize, soybean, sunflower, tomato and potato (stages, Kc, root depth and p from the same FAO-56 tables). Per crop, 'category' groups the crops page filters; 't_opt_c' is the favourable mean air temperature during the mid-season stage and 'yield_t_ha' a typical irrigated yield range for the region: both are reference placeholders to verify, not measurements.",
   "soils": {
     "light": {
       "awc_mm_per_m": 100,
@@ -96,7 +96,16 @@
         "tmin_c": 0,
         "first_days": 40
       },
-      "revenue_usd_ha": 1800
+      "revenue_usd_ha": 1800,
+      "category": "technical",
+      "t_opt_c": [
+        24,
+        30
+      ],
+      "yield_t_ha": [
+        2.6,
+        3.4
+      ]
     },
     {
       "id": "winter_wheat",
@@ -136,7 +145,16 @@
         "tmin_c": -20,
         "first_days": 160
       },
-      "revenue_usd_ha": 1100
+      "revenue_usd_ha": 1100,
+      "category": "grain",
+      "t_opt_c": [
+        15,
+        22
+      ],
+      "yield_t_ha": [
+        4.5,
+        5.8
+      ]
     },
     {
       "id": "chickpea",
@@ -176,7 +194,16 @@
         "tmin_c": -8,
         "first_days": 40
       },
-      "revenue_usd_ha": 1050
+      "revenue_usd_ha": 1050,
+      "category": "legume",
+      "t_opt_c": [
+        15,
+        24
+      ],
+      "yield_t_ha": [
+        1.2,
+        1.8
+      ]
     },
     {
       "id": "sorghum",
@@ -216,7 +243,16 @@
         "tmin_c": 0,
         "first_days": 30
       },
-      "revenue_usd_ha": 800
+      "revenue_usd_ha": 800,
+      "category": "grain",
+      "t_opt_c": [
+        24,
+        32
+      ],
+      "yield_t_ha": [
+        3.0,
+        4.5
+      ]
     },
     {
       "id": "mung_bean",
@@ -250,7 +286,16 @@
         "limit_days": 10
       },
       "frost": null,
-      "revenue_usd_ha": 1080
+      "revenue_usd_ha": 1080,
+      "category": "legume",
+      "t_opt_c": [
+        25,
+        32
+      ],
+      "yield_t_ha": [
+        1.2,
+        1.8
+      ]
     },
     {
       "id": "alfalfa",
@@ -287,7 +332,261 @@
         "limit_days": 15
       },
       "frost": null,
-      "revenue_usd_ha": 1200
+      "revenue_usd_ha": 1200,
+      "category": "legume",
+      "t_opt_c": [
+        18,
+        28
+      ],
+      "yield_t_ha": [
+        10.0,
+        14.0
+      ]
+    },
+    {
+      "id": "maize",
+      "name": {
+        "en": "Maize",
+        "uz": "Makkajo'xori"
+      },
+      "family": "poaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "high",
+      "sow_doy": 115,
+      "stages": [
+        30,
+        40,
+        50,
+        30
+      ],
+      "kc": [
+        0.3,
+        1.2,
+        0.6
+      ],
+      "root_m": 1.2,
+      "p": 0.55,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 12
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 55,
+        "to_day": 85,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 1300,
+      "category": "grain",
+      "t_opt_c": [
+        22,
+        30
+      ],
+      "yield_t_ha": [
+        6.0,
+        8.5
+      ]
+    },
+    {
+      "id": "soybean",
+      "name": {
+        "en": "Soybean",
+        "uz": "Soya"
+      },
+      "family": "fabaceae",
+      "legume": true,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 130,
+      "stages": [
+        20,
+        30,
+        60,
+        25
+      ],
+      "kc": [
+        0.4,
+        1.15,
+        0.5
+      ],
+      "root_m": 1.0,
+      "p": 0.5,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 14
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 45,
+        "to_day": 90,
+        "limit_days": 10
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 25
+      },
+      "revenue_usd_ha": 1000,
+      "category": "legume",
+      "t_opt_c": [
+        22,
+        28
+      ],
+      "yield_t_ha": [
+        2.0,
+        2.8
+      ]
+    },
+    {
+      "id": "sunflower",
+      "name": {
+        "en": "Sunflower",
+        "uz": "Kungaboqar"
+      },
+      "family": "asteraceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "medium",
+      "sow_doy": 105,
+      "stages": [
+        25,
+        35,
+        45,
+        25
+      ],
+      "kc": [
+        0.35,
+        1.0,
+        0.35
+      ],
+      "root_m": 1.2,
+      "p": 0.45,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 10
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 50,
+        "to_day": 85,
+        "limit_days": 12
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 25
+      },
+      "revenue_usd_ha": 900,
+      "category": "technical",
+      "t_opt_c": [
+        20,
+        27
+      ],
+      "yield_t_ha": [
+        1.8,
+        2.6
+      ]
+    },
+    {
+      "id": "tomato",
+      "name": {
+        "en": "Tomato",
+        "uz": "Pomidor"
+      },
+      "family": "solanaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "low",
+      "sow_doy": 120,
+      "stages": [
+        30,
+        40,
+        40,
+        25
+      ],
+      "kc": [
+        0.6,
+        1.15,
+        0.8
+      ],
+      "root_m": 1.0,
+      "p": 0.4,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 15
+      },
+      "heat": {
+        "tmax_c": 38,
+        "from_day": 40,
+        "to_day": 90,
+        "limit_days": 12
+      },
+      "frost": {
+        "tmin_c": 0,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 4000,
+      "category": "vegetable",
+      "t_opt_c": [
+        20,
+        27
+      ],
+      "yield_t_ha": [
+        35.0,
+        55.0
+      ]
+    },
+    {
+      "id": "potato",
+      "name": {
+        "en": "Potato",
+        "uz": "Kartoshka"
+      },
+      "family": "solanaceae",
+      "legume": false,
+      "perennial": false,
+      "residue": "low",
+      "sow_doy": 75,
+      "stages": [
+        25,
+        30,
+        45,
+        30
+      ],
+      "kc": [
+        0.5,
+        1.15,
+        0.75
+      ],
+      "root_m": 0.5,
+      "p": 0.35,
+      "sowing": {
+        "kind": "spring",
+        "temp_c": 7
+      },
+      "heat": {
+        "tmax_c": 35,
+        "from_day": 50,
+        "to_day": 100,
+        "limit_days": 15
+      },
+      "frost": {
+        "tmin_c": -1,
+        "first_days": 30
+      },
+      "revenue_usd_ha": 3000,
+      "category": "vegetable",
+      "t_opt_c": [
+        15,
+        21
+      ],
+      "yield_t_ha": [
+        20.0,
+        28.0
+      ]
     }
   ]
 }

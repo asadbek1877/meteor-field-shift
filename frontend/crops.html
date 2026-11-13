@@ -1,33 +1,139 @@
 <!doctype html>
-<html lang="uz">
+<<<<<<< HEAD
+<html lang="uz" class="dash-page">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TerraShift</title><meta name="description" content="Compare crop suitability and water needs for your field.">
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ekinlar | Dalaviy</title>
+  <meta name="description" content="Which crops fit your region: climate suitability, water need and expected yield from 35 years of NASA POWER data.">
+  <script src="/transitions.js?v=20261115"></script>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-latin.woff2" crossorigin>
+  <link rel="preload" as="image" href="/media/crops-poster.webp" fetchpriority="high">
+  <link rel="stylesheet" href="/style.css?v=20261115">
+  <link rel="stylesheet" href="/field.css?v=20261115">
+  <link rel="stylesheet" href="/crops.css?v=20261115">
+  <link rel="stylesheet" href="/glass.css?v=20261115">
+  <link rel="stylesheet" href="/transitions.css?v=20261115">
+  <script type="speculationrules">{"prefetch": [{"where": {"selector_matches": ".dash-nav a"}, "eagerness": "moderate"}]}</script>
 </head>
-<body data-page="crops" data-title="page_title_crops">
+<body data-page="crops" data-title="page_title_crops" data-providers="nasa_power,soilgrids,open_meteo">
   <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
-    <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span></a>
-    <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/#app" data-page-link="home" data-t="nav_home"></a><a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
-      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a><a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
-      <a href="/current.html" data-page-link="current" data-t="nav_now"></a><a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
-    </nav>
-    <div class="top-actions"><div id="chips" class="chips" aria-live="polite"></div>
-      <div class="seg" role="group" data-t-aria="language_group"><button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button></div>
-      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
+
+  <!-- Crops (Ekinlar): which crops fit the chosen place. Every number comes from the same analysis as Dala
+       (FAO-56 season simulation over NASA POWER, 2011–2025); typical yields and favourable temperatures are
+       reference values from backend/crops.json. Data: app.js (renderCropsPage). Behaviour: field.js. Styles: field.css + crops.css. -->
+  <div id="app" class="app-shell dash ekin" data-in-root>
+    <div data-shell-sprite></div>
+
+    <div class="dash-bg" aria-hidden="true">
+      <div class="dash-video-box crop-video-box">
+        <video class="dash-video" id="dash-video" data-src="/media/crops.mp4" poster="/media/crops-poster.webp"
+          muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      </div>
+      <div class="dash-atmos crop-atmos"></div>
+      <div class="dash-vignette"></div>
     </div>
-  </header>
-  <div id="warnings" class="warnings" aria-live="polite"></div>
-  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-  <main class="page-main" id="main-content">
-    <section class="card" id="crops-card" aria-labelledby="crops-heading">
-      <h1 id="crops-heading" data-t="crops_title"></h1><p class="hint" data-t="crops_hint"></p>
-      <div class="table-wrap" role="region" data-t-aria="crops_table_label" tabindex="0"><table id="crops"></table></div>
-      <ul id="advice-crops" class="advice"></ul>
-    </section>
-  </main>
-  <script src="/i18n.js"></script><script src="/app.js"></script>
+
+    <header data-shell-header></header>
+    <script src="/shell.js?v=20261115"></script>
+    <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+
+    <main class="crop-main" id="main-content">
+      <!-- hero: heading on the left, the season card of the selected crop on the right; the plant video sits between them -->
+      <section class="crop-hero" aria-labelledby="crop-title">
+        <div class="crop-intro">
+          <p class="dash-eyebrow" data-in style="--i: 1"><span class="dash-slashes" aria-hidden="true">///</span><span data-t="crop_eyebrow"></span></p>
+          <h1 class="crop-title" id="crop-title" data-in style="--i: 2"><span data-t="crop_title_a"></span><span><span class="crop-accent" data-t="crop_title_b"></span> <span data-t="crop_title_c"></span></span></h1>
+          <p class="crop-lead" data-in style="--i: 3" data-t="crop_lead"></p>
+        </div>
+
+        <aside class="crop-season" id="crop-season" aria-labelledby="crop-season-name" data-in style="--i: 4">
+          <p class="crop-season-name" id="crop-season-name">–</p>
+          <dl>
+            <div class="cs-row tone-green">
+              <dt class="cs-ico" aria-hidden="true"><svg><use href="#i-leaf"/></svg></dt>
+              <dd><span data-t="crop_sow_window"></span><b id="cs-sow">–</b></dd>
+            </div>
+            <div class="cs-row tone-red">
+              <dt class="cs-ico" aria-hidden="true"><svg><use href="#i-thermo"/></svg></dt>
+              <dd><span data-t="crop_t_opt"></span><b id="cs-temp">–</b></dd>
+            </div>
+            <div class="cs-row tone-cyan">
+              <dt class="cs-ico" aria-hidden="true"><svg><use href="#i-drop"/></svg></dt>
+              <dd><span data-t="crop_humidity"></span><b id="cs-rh">–</b></dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+
+      <!-- crop groups: filter the table and the best-fit cards -->
+      <div class="crop-cats" role="tablist" data-t-aria="crop_cats_label" id="crop-cats" data-in style="--i: 5">
+        <button type="button" role="tab" data-cat="all"><svg><use href="#i-grid"/></svg><span data-t="cat_all"></span></button>
+        <button type="button" role="tab" data-cat="grain"><svg><use href="#i-wheat"/></svg><span data-t="cat_grain"></span></button>
+        <button type="button" role="tab" data-cat="technical"><svg><use href="#i-gear"/></svg><span data-t="cat_technical"></span></button>
+        <button type="button" role="tab" data-cat="vegetable"><svg><use href="#i-drop"/></svg><span data-t="cat_vegetable"></span></button>
+        <button type="button" role="tab" data-cat="legume"><svg><use href="#i-sprout"/></svg><span data-t="cat_legume"></span></button>
+      </div>
+
+      <div class="crop-grid">
+        <!-- the table: one row per crop of the chosen group, best fit first -->
+        <section class="dash-panel crop-table-card content" id="content" aria-labelledby="crop-table-title" data-in style="--i: 6">
+          <h2 class="sr-only" id="crop-table-title" data-t="crop_table_title"></h2>
+          <p class="dash-loading" id="dash-loading" role="status" hidden><span class="dash-spinner" aria-hidden="true"></span><span data-t="loading_dash"></span></p>
+          <div class="dash-banner" id="dash-banner" role="alert" hidden></div>
+          <div class="crop-table" id="crop-table" role="table" data-t-aria="crop_table_title">
+            <div class="ct-head" role="row">
+              <span role="columnheader" data-t="th_crop"></span>
+              <span role="columnheader" data-t="crop_th_sow"></span>
+              <span role="columnheader" aria-sort="none" data-sort-col="water"><button type="button" class="ct-sort" data-sort="water"><span data-t="crop_th_water"></span><i aria-hidden="true"></i></button></span>
+              <span role="columnheader" data-t="crop_th_yield"></span>
+              <span role="columnheader" aria-sort="descending" data-sort-col="fit"><button type="button" class="ct-sort" data-sort="fit"><span data-t="crop_th_fit"></span><i aria-hidden="true"></i></button></span>
+              <span role="columnheader" class="sr-only" data-t="crop_th_more"></span>
+            </div>
+            <div class="ct-body" id="crop-rows" role="rowgroup"></div>
+          </div>
+          <button type="button" class="crop-more" id="crop-more" hidden></button>
+        </section>
+
+        <div class="crop-side">
+          <!-- the three best crops of the chosen group at this place -->
+          <section class="dash-panel crop-best" aria-labelledby="crop-best-title" data-in style="--i: 7">
+            <h2 class="dash-panel-title" id="crop-best-title"><svg><use href="#i-target"/></svg><span><span data-t="crop_best"></span> <small id="crop-best-sub"></small></span></h2>
+            <div class="crop-best-cards" id="crop-best"></div>
+          </section>
+
+          <!-- short conclusions from the same numbers -->
+          <section class="dash-panel crop-summary" aria-labelledby="crop-summary-title" data-in style="--i: 8">
+            <h2 class="dash-panel-title" id="crop-summary-title"><svg><use href="#i-chart"/></svg><span data-t="crop_summary"></span></h2>
+            <ul class="crop-findings" id="crop-findings"></ul>
+          </section>
+        </div>
+      </div>
+
+      <p class="crop-method" data-reveal><span data-t="crop_method"></span> <a href="/sources.html#crop-images" data-t="crop_images_credit"></a></p>
+    </main>
+
+    <!-- details of one crop -->
+    <dialog id="crop-dialog" class="dash-dialog crop-dialog" aria-labelledby="crop-dialog-title">
+      <div class="crop-dialog-body" id="crop-dialog-body"></div>
+    </dialog>
+  </div>
+
+  <script src="/i18n.js?v=20261115"></script>
+  <script src="/app.js?v=20261115"></script>
+  <script src="/field.js?v=20261115"></script>
 </body>
+=======
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TerraShift</title>
+  <meta http-equiv="refresh" content="0; url=/#crops">
+  <link rel="canonical" href="/#crops">
+  <script>location.replace("/" + location.search + "#crops");</script>
+</head>
+<body><a href="/#crops">TerraShift</a></body>
+>>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
 </html>

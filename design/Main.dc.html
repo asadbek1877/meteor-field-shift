@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>TerraShift — Dala</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+.fs{--bg:#F5F5F7;--card:#FFFFFF;--tx:#1D1D1F;--tx2:#6E6E73;--sep:rgba(60,60,67,.16);--fill:rgba(118,118,128,.12);--acc:#007AFF;--link:#0066CC;--glass:rgba(255,255,255,.72);--okt:#1E7B34;--warnt:#A84B00;--badt:#C5001A;--band:rgba(0,122,255,.22);--sh:0 1px 2px rgba(0,0,0,.04),0 12px 32px rgba(0,0,0,.06);--segon:#FFFFFF;--map:#E4EAE1;--map2:#D3DDCF;container-type:inline-size;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;font-size:17px;line-height:1.47;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+.fs[data-theme="dark"]{--bg:#000000;--card:#1C1C1E;--tx:#F5F5F7;--tx2:#A1A1A6;--sep:rgba(84,84,88,.6);--fill:rgba(118,118,128,.24);--acc:#0A84FF;--link:#409CFF;--glass:rgba(29,29,31,.72);--okt:#30D158;--warnt:#FF9F0A;--badt:#FF6961;--band:rgba(10,132,255,.3);--sh:none;--segon:#636366;--map:#1F2622;--map2:#2A332D}
+@media (prefers-color-scheme:dark){.fs[data-theme="auto"]{--bg:#000000;--card:#1C1C1E;--tx:#F5F5F7;--tx2:#A1A1A6;--sep:rgba(84,84,88,.6);--fill:rgba(118,118,128,.24);--acc:#0A84FF;--link:#409CFF;--glass:rgba(29,29,31,.72);--okt:#30D158;--warnt:#FF9F0A;--badt:#FF6961;--band:rgba(10,132,255,.3);--sh:none;--segon:#636366;--map:#1F2622;--map2:#2A332D}}
+.fs *{box-sizing:border-box}
+.fs a{color:var(--link);text-decoration:none}.fs a:hover{text-decoration:underline}
+.fs :focus-visible{outline:3px solid var(--acc);outline-offset:2px;border-radius:8px}
+.skip{position:absolute;left:16px;top:-80px;z-index:40;background:var(--acc);color:#fff!important;padding:12px 18px;border-radius:999px;font-weight:600}.skip:focus{top:8px}
+.top{position:sticky;top:0;z-index:20;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px;background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+.tabs{position:sticky;top:6px;z-index:21;align-self:center;margin:-50px 0 6px;display:flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill);max-width:100%}
+.tabs a,.seg button{display:flex;align-items:center;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--tx);font:inherit;font-size:15px;font-weight:500;white-space:nowrap;cursor:pointer;transition:background .25s cubic-bezier(.3,1.3,.5,1)}
+.tabs a:hover{text-decoration:none;background:var(--fill)}
+.tabs a[aria-current="page"],.seg button[aria-pressed="true"]{background:var(--segon);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:600}
+.seg{display:flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill)}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
+.h1{font-size:clamp(38px,5.6cqw,68px);line-height:1.05;font-weight:700;letter-spacing:-.03em;margin:0;text-wrap:balance}
+.h2{font-size:clamp(28px,3.2cqw,40px);line-height:1.1;font-weight:700;letter-spacing:-.022em;margin:0;text-wrap:balance}
+.h3{font-size:21px;line-height:1.2;font-weight:600;letter-spacing:-.015em;margin:0}
+.eyebrow{font-size:15px;font-weight:600;color:var(--tx2);margin:0}
+.sub{color:var(--tx2);margin:0}.small{font-size:14px;line-height:1.4}
+.num{font-variant-numeric:tabular-nums}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--sh);padding:28px}
+.btn{min-height:44px;padding:0 22px;border-radius:999px;border:0;font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .3s cubic-bezier(.3,1.4,.5,1),opacity .2s}
+.btn:hover{text-decoration:none!important;opacity:.88}.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--acc);color:#fff!important}.btn.sec{background:var(--fill);color:var(--link)}
+.field{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--tx2)}
+.field select,.field input[type="search"]{min-height:44px;width:100%;border-radius:12px;border:0;background:var(--fill);color:var(--tx);font:inherit;padding:0 14px}
+.fs input[type="range"]{width:100%;height:44px;margin:0;accent-color:var(--acc)}
+.disc{border-top:.5px solid var(--sep)}
+.disc summary{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-weight:600;list-style:none}
+.disc summary::-webkit-details-marker{display:none}
+.disc summary svg{transition:transform .3s cubic-bezier(.3,1.3,.5,1);flex:none}.disc[open] summary svg{transform:rotate(90deg)}
+.rb{position:relative;height:8px;border-radius:4px;background:var(--fill)}
+.rb i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--band)}
+.rb b{position:absolute;top:-4px;width:3px;height:16px;margin-left:-1px;border-radius:2px;background:var(--acc)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.glass{background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);box-shadow:0 2px 12px rgba(0,0,0,.12)}
+@container (max-width:1040px){.status{display:none!important}}
+@container (max-width:860px){.tabs{order:99;top:auto;bottom:0;margin:0;align-self:stretch;border-radius:0;padding:8px 12px;gap:4px;overflow-x:auto;background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}.tabs a{min-height:44px}.seg button{min-height:44px}.top{padding:0 16px}.wrap{padding:0 16px}.card{padding:20px;border-radius:22px}}
+@media (prefers-reduced-motion:reduce){.fs *{transition:none!important;animation:none!important}}
+</style>
+</helmet>
+<div class="fs" data-theme="{{theme}}">
+<a class="skip" href="#main-content">Asosiy mazmunga o'tish</a>
+<header class="top">
+<a href="Main.dc.html" aria-label="TerraShift — bosh sahifa" style="display: flex; align-items: center; gap: 10px; color: var(--tx); font-weight: 700; font-size: 19px; letter-spacing: -0.02em">
+<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--acc)"></rect><path d="M5 17c4-5 12-5 16 0M5 12c4-5 12-5 16 0M7 21c3-3 9-3 12 0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"></path></svg>
+TerraShift</a>
+<div style="display: flex; align-items: center; gap: 12px">
+<a class="status" href="Sources.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--tx2)"><span class="dot" style="background: #FF9F0A"></span>NASA POWER · saqlangan</a>
+<div class="seg" role="group" aria-label="Til">
+<button type="button" aria-pressed="true">UZ</button>
+<button type="button" aria-pressed="false">EN</button>
+</div>
+</div>
+</header>
+<nav class="tabs" aria-label="Asosiy bo'limlar">
+<a href="Main.dc.html" aria-current="page">Dala</a>
+<a href="Rotations.dc.html">Rotatsiyalar</a>
+<a href="Climate.dc.html">Iqlim</a>
+<a href="Crops.dc.html">Ekinlar</a>
+<a href="Now.dc.html">Hozir</a>
+<a href="Sources.dc.html">Manbalar</a>
+</nav>
+
+<main id="main-content" style="display: flex; flex-direction: column; gap: 72px; padding: 56px 0 72px">
+
+<section class="wrap" aria-labelledby="verdict" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr)); gap: 40px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 24px">
+<p class="eyebrow">Xulosa · Jizzax (dasht) · 40.1158, 67.8422</p>
+<h1 id="verdict" class="h1">{{title}}</h1>
+<p class="sub" style="font-size: 19px; max-width: 34em">5 ta almashlab ekish 2011–2025 yillarning haqiqiy ob-havosi ustida sinab ko'rildi. Tuproq: o'rta (qumoq). Sug'orish: egatlab.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 24px 28px; padding: 8px 0">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="eyebrow">{{waterLabel}}</span>
+<span class="num" style="font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">{{waterBig}}</span>
+<span class="sub small">{{waterCap}}</span>
+<div class="rb" role="img" aria-label="{{waterRange}}" style="margin-top: 8px"><i style="left: {{rbL}}; width: {{rbW}}"></i><b style="left: {{rbM}}"></b></div>
+<span class="sub small num">{{waterRange}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="eyebrow">Daromad</span>
+<span class="num" style="font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">{{incomeBig}}</span>
+<span class="sub small num">{{incomeCap}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="eyebrow">Tuproq salomatligi</span>
+<span class="num" style="font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">{{soilBig}}</span>
+<span class="sub small num">{{soilCap}}</span>
+</div>
+</div>
+<sc-if value="{{stable}}" hint-placeholder-val="{{true}}">
+<p style="margin: 0; display: flex; align-items: center; gap: 10px"><span class="dot" style="background: #34C759"></span>15 ta ob-havo yilining 14 tasida birinchi — tanlov barqaror.</p>
+</sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<a class="btn pri" href="Rotations.dc.html">Barcha rotatsiyalarni solishtirish</a>
+<a class="btn sec" href="Climate.dc.html">Iqlim qanday o'zgardi</a>
+</div>
+<p class="sub small" style="max-width: 40em">Raqamlar variantlarni o'zaro solishtirish uchun. Bu hosil prognozi emas.</p>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column">
+<div role="application" aria-label="Dala joylashuv xaritasi. Nuqtani tanlash uchun xaritani bosing." style="position: relative; height: 440px; background: var(--map); overflow: hidden">
+<svg viewBox="0 0 600 440" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%">
+<g fill="var(--map2)"><path d="M0 250 180 210 210 330 0 380z"></path><path d="M230 60 400 30 430 150 250 190z"></path><path d="M440 200 600 170 600 320 470 340z"></path><path d="M240 350 430 370 420 440 230 440z"></path></g>
+<g fill="none" stroke="var(--sep)" stroke-width="1.5"><path d="M0 190 220 200 250 0M220 200 240 340 0 400M240 340 460 350 440 190 250 190M460 350 600 340M440 190 600 160M430 150 600 120"></path></g>
+<path d="M0 120C120 150 180 60 300 100S480 240 600 220" fill="none" stroke="var(--acc)" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"></path>
+</svg>
+<span class="sub small" style="position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); white-space: nowrap">Jonli xarita: Leaflet + NASA GIBS qatlami</span>
+<div style="position: absolute; left: 50%; top: 46%; transform: translate(-50%, -100%)"><svg width="36" height="46" viewBox="0 0 36 46" role="img" aria-label="Tanlangan dala nuqtasi"><path d="M18 45C18 45 34 29 34 17A16 16 0 0 0 2 17C2 29 18 45 18 45z" fill="var(--acc)" stroke="#fff" stroke-width="2"></path><circle cx="18" cy="17" r="6" fill="#fff"></circle></svg></div>
+<div style="position: absolute; left: 12px; right: 12px; top: 12px; display: flex; gap: 8px">
+<label class="glass" style="flex: 1; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px">
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="var(--tx2)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"></circle><path d="M12.5 12.5 16 16"></path></svg>
+<input type="search" aria-label="Joy yoki hududni qidiring" placeholder="Masalan, Jizzax yoki Zarafshon" autocomplete="off" style="flex: 1; min-width: 0; height: 44px; border: 0; background: transparent; color: var(--tx); font: inherit">
+</label>
+<button type="button" class="glass" aria-label="Xaritani to'liq ekranda ochish" style="width: 44px; height: 44px; border: 0; border-radius: 50%; color: var(--tx); cursor: pointer; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 2h5v5M7 16H2v-5M16 2l-5.5 5.5M2 16l5.5-5.5"></path></svg></button>
+</div>
+<div class="glass" style="position: absolute; left: 12px; right: 12px; bottom: 12px; border-radius: 20px; padding: 8px 8px 8px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px">
+<label style="flex: 1 1 200px; display: flex; flex-direction: column; font-size: 13px; color: var(--tx2)">NASA sun'iy yo'ldosh qatlami
+<select style="min-height: 32px; border: 0; background: transparent; color: var(--tx); font: inherit; font-weight: 600; padding: 0; margin-left: -4px">
+<option>O'simlik yashilligi NDVI (MODIS Terra)</option>
+<option>Yer sirti harorati (MODIS Terra)</option>
+<option>Yog'in (GPM IMERG)</option>
+<option>Suv zaxirasi (GRACE)</option>
+<option>Qatlamsiz</option>
+</select></label>
+<label style="flex: 1 1 140px; display: flex; flex-direction: column; font-size: 13px; color: var(--tx2)">Qatlam shaffofligi · 70%
+<input type="range" min="20" max="100" defaultValue="70" style="height: 32px"></label>
+</div>
+</div>
+<div style="padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+<button type="button" class="btn pri"><svg width="16" height="16" viewBox="0 0 16 16" fill="#fff" aria-hidden="true"><path d="M14.5 1.5 1.5 7l5.2 2.3L9 14.5z"></path></svg>Joriy joylashuvim</button>
+<button type="button" class="btn sec" aria-pressed="true" style="background: var(--tx); color: var(--bg)">Jizzax (dasht)</button>
+<button type="button" class="btn sec">Toshkent (voha)</button>
+<button type="button" class="btn sec">Qizilqum (cho'l)</button>
+</div>
+<p class="sub small">Xaritada dalangizni bosing yoki joyni nomi bo'yicha qidiring. Qidiruv: <a href="https://photon.komoot.io/">Photon · OpenStreetMap</a></p>
+</div>
+</div>
+</section>
+
+<section class="wrap" aria-label="Loyiha haqida qisqacha" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 32px 48px">
+<div style="display: flex; flex-direction: column; gap: 8px; border-top: .5px solid var(--sep); padding-top: 20px">
+<h2 class="h3">Muammo</h2>
+<p class="sub">Iqlim o'zgaryapti: bu yerda o'rtacha harorat har o'n yilda 0,29 °C ga ko'tarilmoqda, suv esa cheklangan. Odat bo'lgan almashlab ekish endi eng yaxshi tanlov bo'lmasligi mumkin.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; border-top: .5px solid var(--sep); padding-top: 20px">
+<h2 class="h3">NASA ma'lumotlari</h2>
+<p class="sub">NASA POWER: 1991 yildan beri shu nuqtaning 13 095 kunlik ob-havosi. NASA GIBS: yashillik, yer harorati, yog'in va suv zaxirasi qatlamlari xaritada.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; border-top: .5px solid var(--sep); padding-top: 20px">
+<h2 class="h3">Fermer nima oladi</h2>
+<p class="sub">Aynan o'z dalasi uchun suv, daromad, tuproq va iqlim xavfi bo'yicha baholangan almashlab ekish — 15 ta haqiqiy ob-havo yilida sinalgan.</p>
+</div>
+</section>
+
+<section class="wrap" aria-labelledby="setup" style="display: flex; flex-direction: column; gap: 28px">
+<h2 id="setup" class="h2">Dalangizga moslang</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 24px; align-items: start">
+<div class="card" style="display: flex; flex-direction: column; gap: 18px">
+<h3 class="h3">Dala pasporti</h3>
+<label class="field">Hozirgi almashlab ekishingiz
+<select value="{{currentSel}}" onChange="{{onCurrent}}">
+<option value="cotton_mono">Har yili paxta</option>
+<option value="cotton_wheat">Paxta – bug'doy</option>
+<option value="cotton_wheat_mung">Paxta – bug'doy + mosh</option>
+<option value="cotton_wheat_alfalfa">Paxta – bug'doy – beda (2 yil)</option>
+<option value="wheat_chickpea_sorghum">Bug'doy – no'xat – oq jo'xori</option>
+<option value="custom">O'zim tuzaman…</option>
+</select></label>
+<sc-if value="{{custom}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: var(--fill)">
+<p class="sub small">Har bir yil uchun ekinni tanlang. Ikkinchi ekin birinchisidan keyin shu yili ekiladi.</p>
+<div style="display: grid; grid-template-columns: 56px repeat(2, minmax(0, 1fr)); gap: 8px; align-items: center">
+<span class="small" style="font-weight: 600">1-yil</span>
+<select aria-label="1-yil, birinchi ekin" style="min-height: 44px; border: 0; border-radius: 12px; background: var(--card); color: var(--tx); font: inherit; padding: 0 12px"><option>Paxta</option><option>Kuzgi bug'doy</option><option>No'xat</option><option>Oq jo'xori</option><option>Mosh</option><option>Beda</option></select>
+<select aria-label="1-yil, ikkinchi ekin" style="min-height: 44px; border: 0; border-radius: 12px; background: var(--card); color: var(--tx); font: inherit; padding: 0 12px"><option>ikkinchi ekin yo'q</option><option>Mosh</option><option>Oq jo'xori</option></select>
+<span class="small" style="font-weight: 600">2-yil</span>
+<select aria-label="2-yil, birinchi ekin" style="min-height: 44px; border: 0; border-radius: 12px; background: var(--card); color: var(--tx); font: inherit; padding: 0 12px"><option>Kuzgi bug'doy</option><option>Paxta</option><option>No'xat</option><option>Oq jo'xori</option><option>Mosh</option><option>Beda</option></select>
+<select aria-label="2-yil, ikkinchi ekin" style="min-height: 44px; border: 0; border-radius: 12px; background: var(--card); color: var(--tx); font: inherit; padding: 0 12px"><option>Mosh</option><option>ikkinchi ekin yo'q</option><option>Oq jo'xori</option></select>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" class="btn sec" style="background: var(--card)">+ Yil qo'shish</button>
+<button type="button" class="btn sec" style="background: var(--card)">− Yilni olib tashlash</button>
+</div>
+</div>
+</sc-if>
+<label class="field">Sug'orish usuli
+<select><option>Egatlab · samaradorlik 60%</option><option>Yomg'irlatib · samaradorlik 75%</option><option>Tomchilatib · samaradorlik 90%</option></select></label>
+<label class="field">Tuproq turi
+<select><option>O'rta (qumoq)</option><option>Avtomatik (SoilGrids)</option><option>Yengil (qumloq)</option><option>Og'ir (loyli)</option></select></label>
+<p class="sub small">Siz tanlagan tuproq ishlatilmoqda. Suv sig'imi: 1 m chuqurlikda 150 mm.</p>
+</div>
+
+<div class="card" style="display: flex; flex-direction: column; gap: 14px">
+<h3 class="h3">Siz uchun nima muhim?</h3>
+<p class="sub small">Slayderlarni suring: reyting va yuqoridagi xulosa shu zahoti o'zgaradi.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 4px 24px">
+<sc-for list="{{sliders}}" as="s" hint-placeholder-count="4">
+<label style="display: flex; flex-direction: column; font-size: 15px"><span style="display: flex; justify-content: space-between"><span>{{s.label}}</span><span class="num sub">{{s.val}}</span></span>
+<input type="range" min="0" max="100" step="5" value="{{s.val}}" onChange="{{s.on}}"></label>
+</sc-for>
+</div>
+<ol aria-label="Rotatsiyalar reytingi" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+<sc-for list="{{ranking}}" as="r" hint-placeholder-count="5">
+<li style="display: grid; grid-template-columns: minmax(0, 1fr) 52px; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: .5px solid var(--sep)">
+<span style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 15px; font-weight: 500">{{r.name}}<span class="small" style="color: {{r.badgeColor}}; font-weight: 600">{{r.badge}}</span></span>
+<span class="num" style="text-align: right; font-weight: 600">{{r.total}}</span>
+<span style="grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; display: block"><span style="display: block; height: 100%; border-radius: 3px; width: {{r.w}}; background: {{r.bar}}; transition: width .35s cubic-bezier(.3,1.2,.5,1)"></span></span>
+</li>
+</sc-for>
+</ol>
+</div>
+</div>
+</section>
+
+<section class="wrap" aria-labelledby="details">
+<div class="card" style="display: flex; flex-direction: column; padding-bottom: 12px">
+<h2 id="details" class="h3" style="padding-bottom: 18px">Tafsilotlar</h2>
+<details class="disc">
+<summary>Nega aynan shu tanlov<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.5 8.5 6 4 10.5"></path></svg></summary>
+<p class="sub" style="padding-bottom: 18px; max-width: 46em">{{why}}</p>
+</details>
+<details class="disc">
+<summary>Hozirgi rotatsiya bilan taqqoslash<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.5 8.5 6 4 10.5"></path></svg></summary>
+<div style="padding-bottom: 18px; display: flex; flex-direction: column">
+<sc-for list="{{compare}}" as="c" hint-placeholder-count="4">
+<div class="num" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 10px 0; font-size: 15px"><span class="sub">{{c.k}}</span><span>{{c.cur}}</span><span style="font-weight: 600">{{c.best}}</span></div>
+</sc-for>
+</div>
+</details>
+<details class="disc">
+<summary><span style="display: flex; align-items: center; gap: 10px"><span class="dot" style="background: #FF9F0A"></span>1 ta ogohlantirish</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.5 8.5 6 4 10.5"></path></svg></summary>
+<ul class="sub" style="margin: 0; padding: 0 0 18px 20px; display: flex; flex-direction: column; gap: 8px; max-width: 46em">
+<li>Open-Meteo javob bermadi. Haftalik ko'rsatkich prognoz o'rniga shu sanalarda odatda nima bo'lishiga (NASA ma'lumoti, 2011–2025) tayanadi.</li>
+</ul>
+</details>
+</div>
+</section>
+
+<footer class="wrap sub small" style="display: flex; flex-direction: column; gap: 8px; max-width: 1200px">
+<p style="margin: 0; max-width: 60em">Iqlim raqamlari NASA POWER'dan, taxminan 50 km to'rda olingan, shuning uchun yaqin dalalar bir xil iqlim oladi. Ekin chegaralari, tuproq indeksi va daromad ochiq qoidalar, o'lchov yoki hosil prognozi emas.</p>
+<a href="Sources.dc.html" style="min-height: 44px; display: inline-flex; align-items: center">Manbalar va usul</a>
+</footer>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":1440,"height":2500}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { w: { water: 40, income: 20, soil: 20, risk: 20 }, current: 'cotton_wheat', custom: false };
+}
+renderVals() {
+const R = [
+{ id: 'wheat_chickpea_sorghum', name: "Bug'doy – no'xat – oq jo'xori", s: { water: 100, income: 47, risk: 67, soil: 70 }, wat: [5220, 6548, 8079], inc: [700, 818, 927], soil: 70, risk: 33 },
+{ id: 'cotton_wheat_alfalfa', name: "Paxta – bug'doy – beda (2 yil)", s: { water: 50, income: 70, risk: 83, soil: 91 }, wat: [11481, 13097, 13953], inc: [1109, 1210, 1276], soil: 91, risk: 17 },
+{ id: 'cotton_wheat_mung', name: "Paxta – bug'doy + mosh", s: { water: 49, income: 100, risk: 67, soil: 77 }, wat: [11665, 13423, 15031], inc: [1558, 1730, 1877], soil: 77, risk: 33 },
+{ id: 'cotton_wheat', name: "Paxta – bug'doy", s: { water: 70, income: 71, risk: 67, soil: 38 }, wat: [8278, 9336, 11080], inc: [1032, 1220, 1352], soil: 38, risk: 33 },
+{ id: 'cotton_mono', name: 'Har yili paxta', s: { water: 47, income: 87, risk: 67, soil: 26 }, wat: [12040, 14031, 15305], inc: [1320, 1500, 1740], soil: 26, risk: 33 }
+];
+const w = this.state.w;
+const sum = (w.water + w.income + w.soil + w.risk) || 1;
+const fmt = (n) => String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const sign = (n) => (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(n);
+const ranked = R.map((r) => ({ ...r, total: (w.water * r.s.water + w.income * r.s.income + w.soil * r.s.soil + w.risk * r.s.risk) / sum })).sort((a, b) => b.total - a.total);
+const best = ranked[0];
+const cur = ranked.find((r) => r.id === this.state.current);
+const same = best.id === cur.id;
+const dW = cur.wat[1] - best.wat[1];
+const pct = Math.round(Math.abs(dW) / cur.wat[1] * 100);
+const dI = best.inc[1] - cur.inc[1];
+const def = w.water === 40 && w.income === 20 && w.soil === 20 && w.risk === 20 && this.state.current === 'cotton_wheat';
+const labels = { water: 'Suvni tejash', income: 'Daromad', soil: 'Tuproq salomatligi', risk: 'Iqlim xavfidan himoya' };
+const pc = (v) => (v / 16000 * 100).toFixed(1) + '%';
+return {
+theme: this.props.theme ?? 'auto',
+title: (same ? 'Hozirgi rotatsiyangiz eng mos: ' : 'Sizga eng mos: ') + best.name,
+waterLabel: same ? 'Suv sarfi' : dW >= 0 ? 'Suv tejaladi' : "Suv sarfi oshadi",
+waterBig: same ? fmt(best.wat[1]) : (dW >= 0 ? '−' : '+') + pct + '%',
+waterCap: same ? 'm³/ga yiliga' : fmt(dW) + (dW >= 0 ? ' m³/ga kam, yiliga' : " m³/ga ko'p, yiliga"),
+waterRange: 'Oraliq ' + fmt(best.wat[0]) + '–' + fmt(best.wat[2]) + ' m³/ga',
+rbL: pc(best.wat[0]), rbW: pc(best.wat[2] - best.wat[0]), rbM: pc(best.wat[1]),
+incomeBig: same ? fmt(best.inc[1]) + ' $' : sign(dI) + ' $',
+incomeCap: 'gektariga yiliga · ' + fmt(best.inc[1]) + ' $ (' + fmt(best.inc[0]) + '–' + fmt(best.inc[2]) + ')',
+soilBig: String(best.soil),
+soilCap: same ? '100 dan' : '100 dan · hozirgisida ' + cur.soil,
+stable: def,
+currentSel: this.state.custom ? 'custom' : this.state.current,
+custom: this.state.custom,
+onCurrent: (e) => { const v = e.target.value; this.setState(v === 'custom' ? { custom: true } : { custom: false, current: v }); },
+sliders: Object.keys(labels).map((k) => ({ label: labels[k], val: w[k], on: (e) => this.setState({ w: { ...this.state.w, [k]: Number(e.target.value) } }) })),
+ranking: ranked.map((r, i) => ({ name: r.name, total: r.total.toFixed(1), w: r.total.toFixed(1) + '%', bar: i === 0 ? 'var(--acc)' : 'var(--tx2)', badge: i === 0 ? 'eng mos' : r.id === cur.id ? 'hozirgi' : '', badgeColor: i === 0 ? 'var(--link)' : 'var(--tx2)' })),
+why: same ? "Sizning ustuvorliklaringiz bo'yicha hozirgi rotatsiyangiz eng yuqori ball oldi: 100 dan " + best.total.toFixed(1) + '.' : "Sizning ustuvorliklaringiz bo'yicha «" + best.name + "» eng yuqori ball oldi: 100 dan " + best.total.toFixed(1) + ', hozirgi «' + cur.name + '» esa ' + cur.total.toFixed(1) + '. Suv sarfi yiliga gektariga ' + fmt(dW) + ' m³ ' + (dW >= 0 ? 'kam' : "ko'p") + ' (' + pct + '%). Taxminiy daromad yiliga gektariga ' + sign(dI) + " $ ga o'zgaradi. Tuproq salomatligi indeksi: " + best.soil + ', hozirgisida ' + cur.soil + '.',
+compare: [
+{ k: '', cur: 'Hozirgi', best: 'Eng mos' },
+{ k: 'Suv, m³/ga yiliga', cur: fmt(cur.wat[1]), best: fmt(best.wat[1]) },
+{ k: 'Daromad, $/ga yiliga', cur: fmt(cur.inc[1]), best: fmt(best.inc[1]) },
+{ k: 'Tuproq salomatligi', cur: String(cur.soil), best: String(best.soil) },
+{ k: 'Iqlim xavfi, % hosil', cur: String(cur.risk), best: String(best.risk) }
+]
+};
+}
+}
+</script>
+</body>
+</html>

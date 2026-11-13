@@ -34,14 +34,19 @@ JSON_MAX_BYTES = 2_000_000
 _GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best"
 
 
-def _gibs(layer_id: str, title: dict, matrix: str, group: str) -> dict:
+def _gibs(layer_id: str, title: dict, matrix: str, group: str, ext: str = "png", dated: bool = True,
+          lag_days: int = 1) -> dict:
+    """A GIBS WMTS layer. `dated` layers accept a date in place of the second `default`
+    (the site offers a date picker); `lag_days` is how far behind today the newest image usually is."""
     return {
         "id": layer_id,
         "title": title,
         "group": group,
-        "url": f"{_GIBS}/{layer_id}/default/default/{matrix}/{{z}}/{{y}}/{{x}}.png",
+        "url": f"{_GIBS}/{layer_id}/default/default/{matrix}/{{z}}/{{y}}/{{x}}.{ext}",
         "max_zoom": int(matrix.split("Level")[1]),
         "attribution": "NASA GIBS",
+        "dated": dated,
+        "lag_days": lag_days,
     }
 
 
@@ -57,12 +62,14 @@ BUILTIN = [
         "id": "nasa_gibs", "name": "NASA GIBS", "kind": "layers", "builtin": True, "nasa": True,
         "feeds": ["map"],
         "docs": "https://nasa-gibs.github.io/gibs-api-docs/",
-        "description": "Satellite map layers: vegetation, land temperature, precipitation, water storage",
+        "description": "Satellite map layers: true colour, vegetation, land temperature, precipitation, soil moisture, water storage",
         "layers": [
-            _gibs("MODIS_Terra_L3_NDVI_16Day", {"en": "Vegetation NDVI (MODIS Terra)", "uz": "O'simlik yashilligi NDVI (MODIS Terra)"}, "GoogleMapsCompatible_Level9", "vegetation"),
-            _gibs("MODIS_Terra_L3_Land_Surface_Temp_8Day_Day", {"en": "Land surface temperature (MODIS Terra)", "uz": "Yer sirti harorati (MODIS Terra)"}, "GoogleMapsCompatible_Level7", "heat"),
-            _gibs("IMERG_Precipitation_Rate", {"en": "Precipitation (GPM IMERG)", "uz": "Yog'in (GPM IMERG)"}, "GoogleMapsCompatible_Level6", "water"),
-            _gibs("GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI", {"en": "Water storage (GRACE)", "uz": "Suv zaxirasi (GRACE)"}, "GoogleMapsCompatible_Level6", "water"),
+            _gibs("VIIRS_SNPP_CorrectedReflectance_TrueColor", {"en": "True colour (VIIRS SNPP)", "uz": "Haqiqiy rang (VIIRS SNPP)"}, "GoogleMapsCompatible_Level9", "imagery", ext="jpg", lag_days=1),
+            _gibs("MODIS_Terra_L3_NDVI_16Day", {"en": "Vegetation NDVI (MODIS Terra)", "uz": "O'simlik yashilligi NDVI (MODIS Terra)"}, "GoogleMapsCompatible_Level9", "vegetation", lag_days=20),
+            _gibs("MODIS_Terra_L3_Land_Surface_Temp_8Day_Day", {"en": "Land surface temperature (MODIS Terra)", "uz": "Yer sirti harorati (MODIS Terra)"}, "GoogleMapsCompatible_Level7", "heat", lag_days=10),
+            _gibs("SMAP_L4_Analyzed_Root_Zone_Soil_Moisture", {"en": "Root-zone soil moisture (SMAP L4)", "uz": "Ildiz qatlami namligi (SMAP L4)"}, "GoogleMapsCompatible_Level6", "water", lag_days=4),
+            _gibs("IMERG_Precipitation_Rate", {"en": "Precipitation (GPM IMERG)", "uz": "Yog'in (GPM IMERG)"}, "GoogleMapsCompatible_Level6", "water", lag_days=2),
+            _gibs("GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI", {"en": "Water storage (GRACE)", "uz": "Suv zaxirasi (GRACE)"}, "GoogleMapsCompatible_Level6", "water", dated=False),
         ],
     },
     {

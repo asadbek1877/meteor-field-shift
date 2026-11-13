@@ -1,38 +1,55 @@
 <!doctype html>
-<html lang="uz">
+<<<<<<< HEAD
+<html lang="uz" class="dash-page">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TerraShift</title>
+  <title>Rotatsiyalar | Dalaviy</title>
   <meta name="description" content="Compare crop rotations for your field with 35 years of NASA climate data.">
-  <link rel="stylesheet" href="/style.css">
+  <script src="/transitions.js?v=20261115"></script>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin>
+  <link rel="stylesheet" href="/style.css?v=20261115">
+  <link rel="stylesheet" href="/field.css?v=20261115">
+  <link rel="stylesheet" href="/reports.css?v=20261115">
+  <link rel="stylesheet" href="/glass.css?v=20261115">
+  <link rel="stylesheet" href="/transitions.css?v=20261115">
+  <script type="speculationrules">{"prefetch": [{"where": {"selector_matches": ".dash-nav a"}, "eagerness": "moderate"}]}</script>
 </head>
-<body data-page="rotations" data-title="page_title_rotations">
+<body data-page="rotations" data-title="page_title_rotations" data-providers="nasa_power,soilgrids,open_meteo">
   <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
-    <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span></a>
-    <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/#app" data-page-link="home" data-t="nav_home"></a><a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
-      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a><a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
-      <a href="/current.html" data-page-link="current" data-t="nav_now"></a><a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
-    </nav>
-    <div class="top-actions"><div id="chips" class="chips" aria-live="polite"></div>
-      <div class="seg" role="group" data-t-aria="language_group"><button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button></div>
-      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
-    </div>
-  </header>
-  <div id="warnings" class="warnings" aria-live="polite"></div>
-  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-  <main class="page-main" id="main-content">
-    <section class="card verdict compact-verdict" aria-labelledby="verdict">
+
+  <!-- Shared Dalaviy shell (shell.js header, field.js behaviour) around this page's original content; styles: reports.css. -->
+  <div id="app" class="app-shell dash rep" data-in-root>
+    <div data-shell-sprite></div>
+    <div class="dash-bg" aria-hidden="true"><div class="dash-atmos rep-atmos"></div><div class="dash-vignette"></div></div>
+    <header data-shell-header></header>
+    <script src="/shell.js?v=20261115"></script>
+    <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+  <main class="rep-main" id="main-content">
+    <section data-in style="--i: 2" class="dash-panel card verdict compact-verdict" aria-labelledby="verdict">
       <div class="eyebrow" data-t="verdict_eyebrow"></div><h1 id="verdict"></h1><p id="verdict-sub" class="lead"></p>
     </section>
-    <section class="card" id="rotations-card" aria-labelledby="rotations-heading">
+    <section data-reveal class="dash-panel card" id="rotations-card" aria-labelledby="rotations-heading">
       <div class="head"><h2 id="rotations-heading" data-t="rotations_title"></h2><span id="rotations-meta" class="muted small"></span></div>
       <p class="hint" data-t="rotations_hint"></p><div id="rotations"></div>
       <div class="legend-line small muted"><span class="swatch band"></span><span data-t="legend_band"></span><span class="swatch mark"></span><span data-t="legend_mark"></span></div>
     </section>
   </main>
-  <script src="/i18n.js"></script><script src="/app.js"></script>
+  </div>
+  <script src="/i18n.js?v=20261115"></script>
+  <script src="/app.js?v=20261115"></script>
+  <script src="/field.js?v=20261115"></script>
 </body>
+=======
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TerraShift</title>
+  <meta http-equiv="refresh" content="0; url=/#rotations">
+  <link rel="canonical" href="/#rotations">
+  <script>location.replace("/" + location.search + "#rotations");</script>
+</head>
+<body><a href="/#rotations">TerraShift</a></body>
+>>>>>>> 89e8e65ec89c2f22803a9d4f984c5be56073170f
 </html>
