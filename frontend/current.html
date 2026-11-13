@@ -1,35 +1,11 @@
 <!doctype html>
-<html lang="uz">
+<html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TerraShift</title><meta name="description" content="See recent field conditions, rainfall forecast, and irrigation guidance.">
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="utf-8">
+  <title>TerraShift</title>
+  <meta http-equiv="refresh" content="0; url=/#now">
+  <link rel="canonical" href="/#now">
+  <script>location.replace("/" + location.search + "#now");</script>
 </head>
-<body data-page="current" data-title="page_title_current">
-  <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
-    <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span></a>
-    <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/" data-page-link="home" data-t="nav_home"></a><a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
-      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a><a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
-      <a href="/current.html" data-page-link="current" data-t="nav_now"></a><a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
-    </nav>
-    <div class="top-actions"><div id="chips" class="chips" aria-live="polite"></div>
-      <div class="seg" role="group" data-t-aria="language_group"><button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button></div>
-      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
-    </div>
-  </header>
-  <div id="warnings" class="warnings" aria-live="polite"></div>
-  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-  <main class="page-main" id="main-content">
-    <section class="card" id="now-card" aria-labelledby="now-heading">
-      <div class="head"><h1 id="now-heading" data-t="now_title"></h1><span id="now-meta" class="muted small"></span></div>
-      <div id="now-kpis" class="kpis"></div>
-      <h2 id="forecast-title"></h2>
-      <div class="chart" id="forecast-wrap"><canvas id="forecast-chart"></canvas></div>
-      <p id="forecast-note" class="hint"></p><div id="week"></div><ul id="advice-now" class="advice"></ul>
-    </section>
-  </main>
-  <script src="/vendor/chart.umd.min.js"></script><script src="/i18n.js"></script><script src="/app.js"></script>
-</body>
+<body><a href="/#now">TerraShift</a></body>
 </html>
