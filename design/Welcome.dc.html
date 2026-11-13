@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>TerraShift — xush kelibsiz</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+body{margin:0;background:#05070f}
+.ws{container-type:inline-size;position:relative;overflow:hidden;min-height:100vh;background:#05070f url("assets/stars.webp") center top / cover no-repeat;color:#F2F4FA;font-family:Geist,-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+.ws *{box-sizing:border-box}
+.ws a{color:inherit;text-decoration:none}
+.ws :focus-visible{outline:2px solid #8EC5FF;outline-offset:3px;border-radius:999px}
+.skip{position:absolute;left:16px;top:-80px;z-index:50;padding:12px 18px;border-radius:999px;background:#F2F4FA;color:#05070f!important;font-weight:500}
+.skip:focus{top:16px}
+.top{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px clamp(20px,3.4cqw,48px)}
+.links{display:flex;gap:4px}
+.links a{display:flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;font-size:15px;color:rgba(242,244,250,.72);transition:color .15s ease-out,background-color .15s ease-out}
+.links a:hover{color:#F2F4FA;background:rgba(255,255,255,.07)}
+.seg{display:flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.seg button{min-width:44px;min-height:38px;border:0;border-radius:999px;background:transparent;color:rgba(242,244,250,.72);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.seg button[aria-pressed="true"]{background:rgba(255,255,255,.16);color:#F2F4FA}
+.hero{position:relative;z-index:3;padding:clamp(56px,10.5cqw,152px) clamp(20px,7.5cqw,108px) 0}
+.h1{margin:0;font-family:"Instrument Serif",Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(48px,6.1cqw,96px);line-height:.98;letter-spacing:-.012em;text-wrap:balance}
+.lead{margin:28px 0 0;max-width:30em;font-size:18px;line-height:1.55;color:rgba(232,236,246,.74);text-wrap:pretty}
+.acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
+.b1,.b2{display:inline-flex;align-items:center;min-height:52px;padding:0 26px;border-radius:999px;font-size:16px;font-weight:500;transition:scale .15s ease-out,background-color .15s ease-out}
+.b1{background:#F2F4FA;color:#05070f!important}
+.b1:hover{background:#FFFFFF}
+.b2{color:#F2F4FA;box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
+.b2:hover{background:rgba(255,255,255,.07)}
+.b1:active,.b2:active{scale:.96}
+.earth{position:absolute;right:0;bottom:0;z-index:2;width:73cqw;aspect-ratio:1786 / 1175}
+.earth img{display:block;width:100%;height:100%;user-select:none;-webkit-user-drag:none}
+.pin{position:absolute;left:61.3%;top:48.6%;display:flex;align-items:center;gap:12px;transform:translate(-9px,-50%)}
+.ring{position:relative;flex:none;width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #FFFFFF,0 0 12px rgba(142,197,255,.6)}
+.ring::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#FFFFFF}
+.ring::after{content:"";position:absolute;inset:-1px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,255,255,.55);opacity:0}
+.tag{display:flex;flex-direction:column;padding:8px 12px;border-radius:12px;background:rgba(5,7,15,.46);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);white-space:nowrap}
+.tag b{font-size:14px;font-weight:600}
+.tag span{font-size:12px;color:rgba(232,236,246,.72);font-variant-numeric:tabular-nums}
+.foot{position:absolute;z-index:3;left:clamp(20px,7.5cqw,108px);bottom:28px;margin:0;font-size:13px;color:rgba(232,236,246,.56)}
+.credit{position:absolute;z-index:3;right:clamp(20px,3.4cqw,48px);bottom:24px;margin:0;font-size:12px;color:rgba(232,236,246,.56)}
+@media (prefers-reduced-motion:no-preference){
+.earth{animation:rise 1.8s cubic-bezier(.2,0,0,1) both}
+.hero>*{animation:enter .7s cubic-bezier(.2,0,0,1) both}
+.hero>:nth-child(2){animation-delay:.1s}
+.hero>:nth-child(3){animation-delay:.2s}
+.ring::after{animation:ping 2.6s cubic-bezier(.2,0,0,1) 1.8s infinite}
+}
+@keyframes rise{from{opacity:0;transform:translateY(4%)}to{opacity:1;transform:none}}
+@keyframes enter{from{opacity:0;filter:blur(4px);transform:translateY(8px)}to{opacity:1;filter:none;transform:none}}
+@keyframes ping{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+@container (max-width:1000px){.links a{padding:0 10px;font-size:14px}}
+@container (max-width:780px){
+.top{flex-wrap:wrap;padding-top:16px}
+.links{order:3;flex:0 0 100%;overflow-x:auto;margin:0 -10px}
+.hero{padding-top:36px}
+.lead{font-size:17px;margin-top:20px}
+.acts{margin-top:28px}
+.earth{position:relative;right:auto;bottom:auto;align-self:flex-end;width:190cqw;margin:-8cqw -62cqw 0 0;flex:none}
+.foot,.credit{position:relative;left:auto;right:auto;bottom:auto;padding:0 20px 20px}
+.foot{padding-bottom:4px}
+}
+</style>
+</helmet>
+<div class="ws">
+<a class="skip" href="#main-content">Asosiy mazmunga o‘tish</a>
+<header class="top">
+<a href="Welcome.dc.html" aria-label="TerraShift, bosh sahifa" style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em">
+<svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><circle cx="13" cy="13" r="11.25" stroke="#F2F4FA" stroke-width="1.5"></circle><path d="M2.5 15.5c5.5-3.2 15.5-3.2 21 0" stroke="#F2F4FA" stroke-width="1.5" stroke-linecap="round"></path><circle cx="16.5" cy="9" r="2" fill="#8EC5FF"></circle></svg>
+TerraShift</a>
+<nav class="links" aria-label="Asosiy bo‘limlar">
+<a href="Main.dc.html">Dala</a>
+<a href="Rotations.dc.html">Rotatsiyalar</a>
+<a href="Climate.dc.html">Iqlim</a>
+<a href="Crops.dc.html">Ekinlar</a>
+<a href="Sources.dc.html">Manbalar</a>
+</nav>
+<div class="seg" role="group" aria-label="Til">
+<button type="button" aria-pressed="true">UZ</button>
+<button type="button" aria-pressed="false">EN</button>
+</div>
+</header>
+
+<main id="main-content" class="hero">
+<h1 class="h1">Iqlim o‘zgardi.<br>Ekin ham o‘zgarsin.</h1>
+<p class="lead">Xaritada dalangizni belgilang. TerraShift shu joyning 35 yillik NASA ob-havo ma’lumotida almashlab ekish variantlarini sinab, qaysi biri suvni tejashini, daromad va tuproqni saqlashini ko‘rsatadi.</p>
+<div class="acts">
+<a class="b1" href="Main.dc.html">Dalamni tanlash</a>
+<a class="b2" href="Sources.dc.html">Qanday ishlaydi</a>
+</div>
+</main>
+
+<div class="earth">
+<img src="assets/earth.webp" alt="Orbitadan ko‘rinish: O‘rta Osiyo, Kaspiy dengizi va Hindiston, o‘ng tomonda tun boshlanmoqda" width="1786" height="1175">
+<div class="pin"><span class="ring" aria-hidden="true"></span><span class="tag"><b>Toshkent</b><span>41,30° N, 69,24° E</span></span></div>
+</div>
+
+<p class="foot">NASA Space Apps Challenge 2026 uchun Meteor jamoasi</p>
+<p class="credit">Tasvir: NASA Blue Marble</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
