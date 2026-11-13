@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>TerraShift — Iqlim</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+.fs{--bg:#F5F5F7;--card:#FFFFFF;--tx:#1D1D1F;--tx2:#6E6E73;--sep:rgba(60,60,67,.16);--fill:rgba(118,118,128,.12);--acc:#007AFF;--link:#0066CC;--glass:rgba(255,255,255,.72);--okt:#1E7B34;--warnt:#A84B00;--badt:#C5001A;--band:rgba(0,122,255,.22);--sh:0 1px 2px rgba(0,0,0,.04),0 12px 32px rgba(0,0,0,.06);--segon:#FFFFFF;--map:#E4EAE1;--map2:#D3DDCF;container-type:inline-size;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;font-size:17px;line-height:1.47;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+.fs[data-theme="dark"]{--bg:#000000;--card:#1C1C1E;--tx:#F5F5F7;--tx2:#A1A1A6;--sep:rgba(84,84,88,.6);--fill:rgba(118,118,128,.24);--acc:#0A84FF;--link:#409CFF;--glass:rgba(29,29,31,.72);--okt:#30D158;--warnt:#FF9F0A;--badt:#FF6961;--band:rgba(10,132,255,.3);--sh:none;--segon:#636366;--map:#1F2622;--map2:#2A332D}
+@media (prefers-color-scheme:dark){.fs[data-theme="auto"]{--bg:#000000;--card:#1C1C1E;--tx:#F5F5F7;--tx2:#A1A1A6;--sep:rgba(84,84,88,.6);--fill:rgba(118,118,128,.24);--acc:#0A84FF;--link:#409CFF;--glass:rgba(29,29,31,.72);--okt:#30D158;--warnt:#FF9F0A;--badt:#FF6961;--band:rgba(10,132,255,.3);--sh:none;--segon:#636366;--map:#1F2622;--map2:#2A332D}}
+.fs *{box-sizing:border-box}
+.fs a{color:var(--link);text-decoration:none}.fs a:hover{text-decoration:underline}
+.fs :focus-visible{outline:3px solid var(--acc);outline-offset:2px;border-radius:8px}
+.skip{position:absolute;left:16px;top:-80px;z-index:40;background:var(--acc);color:#fff!important;padding:12px 18px;border-radius:999px;font-weight:600}.skip:focus{top:8px}
+.top{position:sticky;top:0;z-index:20;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px;background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep)}
+.tabs{position:sticky;top:6px;z-index:21;align-self:center;margin:-50px 0 6px;display:flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill);max-width:100%}
+.tabs a,.seg button{display:flex;align-items:center;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--tx);font:inherit;font-size:15px;font-weight:500;white-space:nowrap;cursor:pointer;transition:background .25s cubic-bezier(.3,1.3,.5,1)}
+.tabs a:hover{text-decoration:none;background:var(--fill)}
+.tabs a[aria-current="page"],.seg button[aria-pressed="true"]{background:var(--segon);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:600}
+.seg{display:flex;gap:2px;padding:2px;border-radius:999px;background:var(--fill)}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 24px}
+.h1{font-size:clamp(38px,5.6cqw,68px);line-height:1.05;font-weight:700;letter-spacing:-.03em;margin:0;text-wrap:balance}
+.h2{font-size:clamp(28px,3.2cqw,40px);line-height:1.1;font-weight:700;letter-spacing:-.022em;margin:0;text-wrap:balance}
+.h3{font-size:21px;line-height:1.2;font-weight:600;letter-spacing:-.015em;margin:0}
+.eyebrow{font-size:15px;font-weight:600;color:var(--tx2);margin:0}
+.sub{color:var(--tx2);margin:0}.small{font-size:14px;line-height:1.4}
+.num{font-variant-numeric:tabular-nums}
+.card{background:var(--card);border-radius:24px;box-shadow:var(--sh);padding:28px}
+.btn{min-height:44px;padding:0 22px;border-radius:999px;border:0;font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .3s cubic-bezier(.3,1.4,.5,1),opacity .2s}
+.btn:hover{text-decoration:none!important;opacity:.88}.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--acc);color:#fff!important}.btn.sec{background:var(--fill);color:var(--link)}
+.field{display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--tx2)}
+.field select,.field input[type="search"]{min-height:44px;width:100%;border-radius:12px;border:0;background:var(--fill);color:var(--tx);font:inherit;padding:0 14px}
+.fs input[type="range"]{width:100%;height:44px;margin:0;accent-color:var(--acc)}
+.disc{border-top:.5px solid var(--sep)}
+.disc summary{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-weight:600;list-style:none}
+.disc summary::-webkit-details-marker{display:none}
+.disc summary svg{transition:transform .3s cubic-bezier(.3,1.3,.5,1);flex:none}.disc[open] summary svg{transform:rotate(90deg)}
+.rb{position:relative;height:8px;border-radius:4px;background:var(--fill)}
+.rb i{position:absolute;top:0;bottom:0;border-radius:4px;background:var(--band)}
+.rb b{position:absolute;top:-4px;width:3px;height:16px;margin-left:-1px;border-radius:2px;background:var(--acc)}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.glass{background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);box-shadow:0 2px 12px rgba(0,0,0,.12)}
+@container (max-width:1040px){.status{display:none!important}}
+@container (max-width:860px){.tabs{order:99;top:auto;bottom:0;margin:0;align-self:stretch;border-radius:0;padding:8px 12px;gap:4px;overflow-x:auto;background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}.tabs a{min-height:44px}.seg button{min-height:44px}.top{padding:0 16px}.wrap{padding:0 16px}.card{padding:20px;border-radius:22px}}
+@media (prefers-reduced-motion:reduce){.fs *{transition:none!important;animation:none!important}}
+</style>
+</helmet>
+<div class="fs" data-theme="{{theme}}">
+<a class="skip" href="#main-content">Asosiy mazmunga o'tish</a>
+<header class="top">
+<a href="Main.dc.html" aria-label="TerraShift — bosh sahifa" style="display: flex; align-items: center; gap: 10px; color: var(--tx); font-weight: 700; font-size: 19px; letter-spacing: -0.02em">
+<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--acc)"></rect><path d="M5 17c4-5 12-5 16 0M5 12c4-5 12-5 16 0M7 21c3-3 9-3 12 0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"></path></svg>
+TerraShift</a>
+<div style="display: flex; align-items: center; gap: 12px">
+<a class="status" href="Sources.dc.html" style="display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--tx2)"><span class="dot" style="background: #FF9F0A"></span>NASA POWER · saqlangan</a>
+<div class="seg" role="group" aria-label="Til">
+<button type="button" aria-pressed="true">UZ</button>
+<button type="button" aria-pressed="false">EN</button>
+</div>
+</div>
+</header>
+<nav class="tabs" aria-label="Asosiy bo'limlar">
+<a href="Main.dc.html">Dala</a>
+<a href="Rotations.dc.html">Rotatsiyalar</a>
+<a href="Climate.dc.html" aria-current="page">Iqlim</a>
+<a href="Crops.dc.html">Ekinlar</a>
+<a href="Now.dc.html">Hozir</a>
+<a href="Sources.dc.html">Manbalar</a>
+</nav>
+<main id="main-content" style="display: flex; flex-direction: column; gap: 32px; padding: 56px 0 72px">
+<section class="wrap" style="display: flex; flex-direction: column; gap: 16px">
+<p class="eyebrow">1991–2005 va 2011–2025 taqqoslanadi · NASA POWER · FAO-56 Penman-Monteith</p>
+<h1 class="h1" style="font-size: clamp(34px, 4.4cqw, 56px)">Bu yerda iqlim qanday o'zgardi</h1>
+<p class="sub" style="font-size: 19px; max-width: 40em">Jizzax (dasht) nuqtasi, 35 yil, 13 095 kunlik ma'lumot. Har bir ko'rsatkich ostida 2040 yilgacha ehtimoliy oraliq.</p>
+</section>
+<section class="wrap" aria-label="Asosiy siljishlar"><div class="card" style="display: flex; flex-direction: column; gap: 28px; padding-bottom: 8px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 32px 40px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">O'rtacha harorat</span>
+<span class="num" style="font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">+0,32 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">°C</span></span>
+<span class="sub small num">avval 14,06 → hozir 14,38</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: #34C759"></span>trend ishonchli</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 14,27–16,09"><i style="left: 38.1%; width: 42.9%"></i><b style="left: 59.6%"></b></div>
+<span class="sub small num">2040: 15,18 (80% oraliq 14,27–16,09)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Yillik yog'in</span>
+<span class="num" style="font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">+49 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">mm</span></span>
+<span class="sub small num">avval 299 → hozir 348</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 285–512"><i style="left: 10.1%; width: 80.8%"></i><b style="left: 50.3%"></b></div>
+<span class="sub small num">2040: 398 (80% oraliq 285–512)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Suvga talab (ET0)</span>
+<span class="num" style="font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">−1 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">mm</span></span>
+<span class="sub small num">avval 1368 → hozir 1367</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 1298–1469"><i style="left: 34.7%; width: 45.7%"></i><b style="left: 57.4%"></b></div>
+<span class="sub small num">2040: 1383 (80% oraliq 1298–1469)</span>
+</div>
+</div>
+<details class="disc"><summary>Yana 6 ko'rsatkich<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--tx2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 1.5 8.5 6 4 10.5"></path></svg></summary>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 32px 40px; padding: 8px 0 24px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">35 °C dan issiq kunlar</span>
+<span class="num" style="font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">+3 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">kun</span></span>
+<span class="sub small num">avval 44 → hozir 47</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 40–64"><i style="left: 12.8%; width: 76.9%"></i><b style="left: 51.3%"></b></div>
+<span class="sub small num">2040: 52 (80% oraliq 40–64)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Sovuq kunlar (0 °C dan past)</span>
+<span class="num" style="font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">−1 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">kun</span></span>
+<span class="sub small num">avval 77 → hozir 76</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: #34C759"></span>trend ishonchli</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 39–85"><i style="left: 7.2%; width: 84.9%"></i><b style="left: 49.7%"></b></div>
+<span class="sub small num">2040: 62 (80% oraliq 39–85)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Eng uzun yomg'irsiz davr</span>
+<span class="num" style="font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">−8 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">kun</span></span>
+<span class="sub small num">avval 86 → hozir 79</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 27–133"><i style="left: 2.3%; width: 91.9%"></i><b style="left: 48.3%"></b></div>
+<span class="sub small num">2040: 80 (80% oraliq 27–133)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Yomg'irli kunlar</span>
+<span class="num" style="font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">+9 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">kun</span></span>
+<span class="sub small num">avval 62 → hozir 71</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 55–99"><i style="left: 10.1%; width: 80.8%"></i><b style="left: 50.5%"></b></div>
+<span class="sub small num">2040: 77 (80% oraliq 55–99)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Namlik indeksi (yog'in / ET0)</span>
+<span class="num" style="font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">+0,03 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0"></span></span>
+<span class="sub small num">avval 0,22 → hozir 0,26</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 0,19–0,38"><i style="left: 8.4%; width: 83.2%"></i><b style="left: 49.8%"></b></div>
+<span class="sub small num">2040: 0,29 (80% oraliq 0,19–0,38)</span>
+</div><div style="display: flex; flex-direction: column; gap: 8px">
+<span class="eyebrow">Yilning eng issiq kuni</span>
+<span class="num" style="font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.03em">−0,2 <span class="sub" style="font-size: 17px; font-weight: 400; letter-spacing: 0">°C</span></span>
+<span class="sub small num">avval 41,9 → hozir 41,7</span>
+<span class="small" style="display: flex; align-items: center; gap: 8px"><span class="dot" style="background: var(--tx2)"></span>trend ishonchli emas</span>
+<div class="rb" role="img" aria-label="2040 yil oralig'i 40,2–43,6"><i style="left: 41.9%; width: 35.4%"></i><b style="left: 59.6%"></b></div>
+<span class="sub small num">2040: 41,9 (80% oraliq 40,2–43,6)</span>
+</div>
+</div></details>
+</div></section>
+<section class="wrap" aria-labelledby="annual"><div class="card" style="display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<h2 id="annual" class="h3">Yillar bo'yicha va 2040 yilgacha</h2>
+<label class="field" style="flex-direction: row; align-items: center; gap: 10px">Ko'rsatkich
+<select style="width: auto"><option>O'rtacha harorat</option><option>Yillik yog'in</option><option>Suvga talab (ET0)</option><option>35 °C dan issiq kunlar</option><option>Sovuq kunlar (0 °C dan past)</option><option>Eng uzun yomg'irsiz davr</option><option>Yomg'irli kunlar</option><option>Namlik indeksi (yog'in / ET0)</option><option>Yilning eng issiq kuni</option></select></label>
+</div>
+<div role="region" aria-label="Yillik grafik. Yon tomonga aylantirish mumkin." tabindex="0" style="overflow-x: auto"><svg viewBox="0 0 800 300" role="img" aria-label="O'rtacha yillik harorat 1991–2025 va trend davomi 2040 yilgacha. 1991 yilda 13,7 °C, 2025 yilda 15,5 °C; 2040 yilga 14,3 dan 16,1 °C gacha." style="display: block; width: 100%; min-width: 640px; height: auto; font-size: 12px; fill: var(--tx2); font-variant-numeric: tabular-nums">
+<line x1="44" x2="784" y1="270.0" y2="270.0" stroke="var(--sep)" stroke-width="1"></line><text x="36" y="274.0" text-anchor="end">12</text><line x1="44" x2="784" y1="213.6" y2="213.6" stroke="var(--sep)" stroke-width="1"></line><text x="36" y="217.6" text-anchor="end">13</text><line x1="44" x2="784" y1="157.1" y2="157.1" stroke="var(--sep)" stroke-width="1"></line><text x="36" y="161.1" text-anchor="end">14</text><line x1="44" x2="784" y1="100.7" y2="100.7" stroke="var(--sep)" stroke-width="1"></line><text x="36" y="104.7" text-anchor="end">15</text><line x1="44" x2="784" y1="44.2" y2="44.2" stroke="var(--sep)" stroke-width="1"></line><text x="36" y="48.2" text-anchor="end">16</text><text x="44.0" y="292" text-anchor="middle">1991</text><text x="179.9" y="292" text-anchor="middle">2000</text><text x="330.9" y="292" text-anchor="middle">2010</text><text x="482.0" y="292" text-anchor="middle">2020</text><text x="633.0" y="292" text-anchor="middle">2030</text><text x="784.0" y="292" text-anchor="middle">2040</text>
+<polygon points="557.5,114.8 572.6,65.7 587.7,64.0 602.8,62.3 617.9,60.0 633.0,58.3 648.1,56.6 663.2,54.4 678.3,52.7 693.4,51.0 708.5,48.7 723.6,47.0 738.7,44.8 753.8,43.1 768.9,40.8 784.0,39.1 784.0,141.9 768.9,143.0 753.8,144.1 738.7,145.3 723.6,147.0 708.5,148.1 693.4,149.2 678.3,150.9 663.2,152.0 648.1,153.2 633.0,154.9 617.9,156.0 602.8,157.7 587.7,158.8 572.6,160.5" fill="var(--band)" stroke="none"></polygon>
+<line x1="557.5" x2="557.5" y1="16" y2="270" stroke="var(--sep)" stroke-dasharray="3 4"></line>
+<polyline points="44.0,172.9 59.1,192.1 74.2,237.8 89.3,185.3 104.4,153.7 119.5,201.1 134.6,140.7 149.7,156.0 164.8,135.7 179.9,127.2 195.0,108.6 210.1,109.7 225.2,148.1 240.3,102.4 255.4,132.3 270.5,113.1 285.6,127.8 300.7,147.0 315.8,148.1 330.9,97.3 346.0,169.5 361.1,188.7 376.2,115.9 391.3,176.9 406.4,128.3 421.6,86.6 436.7,143.0 451.8,154.3 466.9,135.7 482.0,206.2 497.1,122.7 512.2,109.7 527.3,80.9 542.4,140.2 557.5,74.7" fill="none" stroke="var(--tx2)" stroke-width="1.5" stroke-linejoin="round"></polyline>
+<line x1="44" y1="169.5" x2="557.5" y2="114.8" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round"></line>
+<line x1="557.5" y1="114.8" x2="784" y2="90.5" stroke="var(--acc)" stroke-width="2.5" stroke-dasharray="2 6" stroke-linecap="round"></line>
+<circle cx="784" cy="90.5" r="4" fill="var(--acc)"></circle>
+<text x="778" y="30" text-anchor="end" style="fill: var(--tx); font-weight: 600">2040: 15,2 °C (14,3–16,1)</text>
+</svg></div>
+<div class="sub small" style="display: flex; flex-wrap: wrap; gap: 8px 24px">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; height: 2px; background: var(--tx2)"></span>Yillik qiymat (NASA POWER)</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; height: 3px; border-radius: 2px; background: var(--acc)"></span>Chiziqli trend</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; height: 10px; border-radius: 3px; background: var(--band)"></span>Trend davomi, 80% oraliq</span>
+</div>
+<p class="sub small" style="margin: 0; max-width: 60em">2040 yilgacha bo'lgan qism o'tgan 35 yil trendining davomi, iqlim modeli emas. Rangli oraliq yillar orasidagi tabiiy tebranishni ko'rsatadi.</p>
+</div></section>
+<section class="wrap" aria-labelledby="monthly"><div class="card" style="display: flex; flex-direction: column; gap: 20px">
+<h2 id="monthly" class="h3">Oylar bo'yicha: avval va hozir</h2>
+<div class="sub small" style="display: flex; flex-wrap: wrap; gap: 8px 24px">
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; border-top: 2px dashed var(--tx2)"></span>1991–2005</span>
+<span style="display: flex; align-items: center; gap: 8px"><span style="width: 24px; height: 3px; border-radius: 2px; background: var(--acc)"></span>2011–2025</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 32px"><figure style="margin: 0; display: flex; flex-direction: column; gap: 8px"><figcaption style="font-weight: 600">Harorat, °C</figcaption>
+<svg viewBox="0 0 280 112" role="img" aria-label="Harorat, °C: avval va hozir, oylar bo'yicha. Iyul: 27,9 → 28,8 °C" style="display: block; width: 100%; height: auto; font-size: 11px; fill: var(--tx2)">
+<line x1="10" x2="270" y1="92" y2="92" stroke="var(--sep)"></line>
+<polyline points="10.0,89.2 33.6,85.0 57.3,72.1 80.9,53.1 104.5,38.2 128.2,20.6 151.8,13.9 175.5,18.6 199.1,34.3 222.7,53.6 246.4,71.0 270.0,84.2" fill="none" stroke="var(--tx2)" stroke-width="1.5" stroke-dasharray="3 3"></polyline>
+<polyline points="10.0,88.6 33.6,84.7 57.3,68.2 80.9,50.6 104.5,33.8 128.2,18.1 151.8,11.4 175.5,17.8 199.1,32.9 222.7,54.8 246.4,74.9 270.0,86.7" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linejoin="round"></polyline>
+<text x="10" y="108">Yan</text><text x="80.9" y="108" text-anchor="middle">Apr</text><text x="151.8" y="108" text-anchor="middle">Iyl</text><text x="222.7" y="108" text-anchor="middle">Okt</text><text x="270" y="108" text-anchor="end">Dek</text>
+</svg><span class="sub small num">Iyul: 27,9 → 28,8 °C</span></figure><figure style="margin: 0; display: flex; flex-direction: column; gap: 8px"><figcaption style="font-weight: 600">Yog'in, mm/oy</figcaption>
+<svg viewBox="0 0 280 112" role="img" aria-label="Yog'in, mm/oy: avval va hozir, oylar bo'yicha. Oktabr: 10,3 → 27,5 mm" style="display: block; width: 100%; height: auto; font-size: 11px; fill: var(--tx2)">
+<line x1="10" x2="270" y1="92" y2="92" stroke="var(--sep)"></line>
+<polyline points="10.0,54.4 33.6,41.0 57.3,26.1 80.9,33.3 104.5,44.1 128.2,79.1 151.8,86.4 175.5,89.7 199.1,86.8 222.7,78.7 246.4,53.0 270.0,44.6" fill="none" stroke="var(--tx2)" stroke-width="1.5" stroke-dasharray="3 3"></polyline>
+<polyline points="10.0,56.1 33.6,36.8 57.3,12.9 80.9,34.0 104.5,42.2 128.2,75.2 151.8,82.7 175.5,87.6 199.1,87.1 222.7,56.5 246.4,39.4 270.0,43.9" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linejoin="round"></polyline>
+<text x="10" y="108">Yan</text><text x="80.9" y="108" text-anchor="middle">Apr</text><text x="151.8" y="108" text-anchor="middle">Iyl</text><text x="222.7" y="108" text-anchor="middle">Okt</text><text x="270" y="108" text-anchor="end">Dek</text>
+</svg><span class="sub small num">Oktabr: 10,3 → 27,5 mm</span></figure><figure style="margin: 0; display: flex; flex-direction: column; gap: 8px"><figcaption style="font-weight: 600">Suvga talab (ET0), mm/oy</figcaption>
+<svg viewBox="0 0 280 112" role="img" aria-label="Suvga talab (ET0), mm/oy: avval va hozir, oylar bo'yicha. Iyul: 239,6 → 247,0 mm" style="display: block; width: 100%; height: auto; font-size: 11px; fill: var(--tx2)">
+<line x1="10" x2="270" y1="92" y2="92" stroke="var(--sep)"></line>
+<polyline points="10.0,83.4 33.6,79.7 57.3,70.0 80.9,55.8 104.5,38.2 128.2,20.7 151.8,11.5 175.5,20.6 199.1,41.9 222.7,61.6 246.4,77.7 270.0,83.3" fill="none" stroke="var(--tx2)" stroke-width="1.5" stroke-dasharray="3 3"></polyline>
+<polyline points="10.0,83.1 33.6,80.3 57.3,70.1 80.9,56.4 104.5,36.8 128.2,19.7 151.8,9.0 175.5,20.5 199.1,41.5 222.7,64.0 246.4,79.5 270.0,83.7" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linejoin="round"></polyline>
+<text x="10" y="108">Yan</text><text x="80.9" y="108" text-anchor="middle">Apr</text><text x="151.8" y="108" text-anchor="middle">Iyl</text><text x="222.7" y="108" text-anchor="middle">Okt</text><text x="270" y="108" text-anchor="end">Dek</text>
+</svg><span class="sub small num">Iyul: 239,6 → 247,0 mm</span></figure></div>
+</div></section>
+<section class="wrap" aria-labelledby="frost"><div class="card" style="display: flex; flex-direction: column; gap: 8px">
+<h2 id="frost" class="h3" style="padding-bottom: 12px">Sovuq urishi</h2>
+<div class="sub small num" style="display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 12px; padding-bottom: 8px"><span></span><span>1991–2005</span><span>2011–2025</span><span style="text-align: right">Siljish</span></div>
+<div class="num" style="display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 0; border-top: .5px solid var(--sep); font-size: 15px"><span>Bahorgi oxirgi sovuq</span><span class="sub">9-aprel</span><span>1-aprel</span><span style="font-weight: 600; text-align: right">−8 kun</span></div><div class="num" style="display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 0; border-top: .5px solid var(--sep); font-size: 15px"><span>Bahorgi oxirgi sovuq, kech yilda</span><span class="sub">30-aprel</span><span>13-aprel</span><span style="font-weight: 600; text-align: right">−17 kun</span></div><div class="num" style="display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 0; border-top: .5px solid var(--sep); font-size: 15px"><span>Kuzgi birinchi sovuq</span><span class="sub">11-noyabr</span><span>29-oktabr</span><span style="font-weight: 600; text-align: right">−13 kun</span></div><div class="num" style="display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 0; border-top: .5px solid var(--sep); font-size: 15px"><span>Sovuqsiz davr</span><span class="sub">215 kun</span><span>219 kun</span><span style="font-weight: 600; text-align: right">+4 kun</span></div>
+</div></section>
+<section class="wrap" aria-label="Xulosalar"><ul class="sub" style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 52em">
+<li>O'rtacha harorat 1991–2005 yillarga nisbatan 0,3 °C ga oshgan (har o'n yilda +0,29 °C, statistik jihatdan ishonchli).</li>
+<li>Yillik yog'in 16% ga oshgan (299 dan 348 mm ga). Yillar orasidagi farq katta, shuning uchun buning o'zi ishonchli trend emas.</li>
+<li>35 °C dan issiq kunlar: avval yiliga 44 ta, hozir 47 ta.</li>
+</ul></section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["auto","light","dark"],"default":"auto"},"$preview":{"width":1440,"height":2300}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'auto' };
+}
+}
+</script>
+</body>
+</html>

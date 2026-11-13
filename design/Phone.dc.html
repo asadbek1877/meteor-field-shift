@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>TerraShift — telefon, qorong'i mavzu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 4700px; background: #000000; display: flex; flex-direction: column">
+<dc-import name="Main" theme="{{theme}}" hint-size="390px,4700px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light","auto"],"default":"dark"},"$preview":{"width":390,"height":4700}}'>
+class Component extends DCLogic {
+renderVals() {
+return { theme: this.props.theme ?? 'dark' };
+}
+}
+</script>
+</body>
+</html>
