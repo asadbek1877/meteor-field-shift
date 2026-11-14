@@ -1,0 +1,232 @@
+/* Dalaviy Liquid Glass — the material system for every dashboard page (load after field.css).
+
+   Principles taken from Apple's Liquid Glass guidance (HIG Materials, "Adopting Liquid Glass", WWDC25):
+   - Glass is a functional layer that floats above content: navigation, controls, popovers, modals.
+     Content (cards, charts, data) stays a quieter, non-blurred translucent layer. No glass on glass.
+   - Heavier surfaces read thicker: more blur and a deeper shadow for modals than for chips.
+   - Light catches the top edge: a bright rim and a soft specular that follows the pointer on interactive glass.
+   - Scroll edge effect instead of hard dividers under the sticky bar.
+   - Reduce transparency / increase contrast / reduce motion each have their own fallback.
+
+   Primitives (use as classes or extend through the selector lists below):
+     .glass-navigation  .glass-control  .glass-prominent  .glass-dropdown  .glass-popover
+     .glass-modal  .glass-interactive  .glass-panel-subtle                                        */
+
+:root {
+  /* tint of the material (Dalaviy navy) and how much of the background shows through */
+  --glass-rgb: 16, 30, 56;
+  --glass-a-nav: .52;
+  --glass-a-control: .46;
+  --glass-a-pop: .88;
+  --glass-a-modal: .74;
+  --glass-a-panel: .62;
+  /* blur radius grows with the surface */
+  --glass-blur-control: 14px;
+  --glass-blur-nav: 18px;
+  --glass-blur-pop: 24px;
+  --glass-blur-modal: 32px;
+  --glass-saturate: 1.7;
+  /* light */
+  --glass-rim: rgba(255, 255, 255, .16);
+  --glass-rim-top: rgba(255, 255, 255, .32);
+  --glass-specular: rgba(255, 255, 255, .16);
+  --glass-hover: rgba(255, 255, 255, .07);
+  --glass-active: rgba(255, 255, 255, .12);
+  /* depth */
+  --glass-shadow-sm: 0 4px 14px rgba(0, 0, 0, .28);
+  --glass-shadow-md: 0 10px 30px rgba(0, 0, 0, .38);
+  --glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, .55);
+  /* shape: radii are concentric (inner = outer - padding) */
+  --glass-r-pill: 999px;
+  --glass-r-pop: 14px;
+  --glass-r-modal: 22px;
+  /* motion: critically damped, no overshoot */
+  --glass-ease: cubic-bezier(.22, 1, .36, 1);
+  --glass-press: cubic-bezier(.2, 0, 0, 1);
+}
+
+/* ---------------------------------------------------------------- shared material recipe */
+.glass-navigation, .glass-control, .glass-prominent, .glass-dropdown, .glass-popover, .glass-modal,
+.dash-nav, .dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn,
+.dash-combo, .dash-tabs, .mode-switch, .field-link, .dash-btn-secondary, .dash-panel-action,
+.rot-go, .clim-advice-go, .field-expand, .field-hint,
+.dash-pop, .dash-listbox, .dash-dialog, dialog.fullscreen-map-dialog .map-tools {
+  --g-a: var(--glass-a-control);
+  --g-blur: var(--glass-blur-control);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .09) 0%, rgba(255, 255, 255, .02) 46%, rgba(255, 255, 255, 0) 100%),
+    rgba(var(--glass-rgb), var(--g-a));
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-rim);
+  box-shadow: inset 0 1px 0 var(--glass-rim-top), inset 0 -1px 0 rgba(255, 255, 255, .04), var(--glass-shadow-sm);
+}
+
+/* weights */
+.glass-navigation, .dash-nav { --g-a: var(--glass-a-nav); --g-blur: var(--glass-blur-nav); }
+.glass-dropdown, .glass-popover, .dash-pop, .dash-listbox { --g-a: var(--glass-a-pop); --g-blur: var(--glass-blur-pop); box-shadow: inset 0 1px 0 var(--glass-rim-top), var(--glass-shadow-md); }
+.glass-modal, .dash-dialog { --g-a: var(--glass-a-modal); --g-blur: var(--glass-blur-modal); box-shadow: inset 0 1px 0 var(--glass-rim-top), var(--glass-shadow-lg); }
+
+/* prominent glass: the material tinted with the brand colour (primary actions, the active nav pill) */
+.glass-prominent, .dash-btn-primary, .clim-run, .nav-glow, .dash-tabs [role="tab"][aria-selected="true"] {
+  -webkit-backdrop-filter: blur(var(--glass-blur-control)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur-control)) saturate(var(--glass-saturate));
+  border: 1px solid rgba(170, 220, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -6px 14px rgba(0, 20, 60, .25), 0 0 22px rgba(56, 160, 255, .35), var(--glass-shadow-sm);
+}
+
+/* ---------------------------------------------------------------- interactive glass: press + specular */
+.glass-interactive, .dash-nav a, .dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn, .dash-combo,
+.dash-tabs [role="tab"], .mode-switch button, .field-link, .dash-btn, .dash-panel-action, .rot-go, .clim-run {
+  position: relative;
+}
+.field-expand, .field-hint, .clim-advice-go { position: absolute; }
+.glass-interactive, .dash-nav a, .dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn, .dash-combo,
+.dash-tabs [role="tab"], .mode-switch button, .field-link, .dash-btn, .dash-panel-action, .rot-go, .clim-advice-go,
+.field-expand, .field-hint, .clim-run {
+  isolation: isolate;
+  transition: transform .18s var(--glass-press), background-color .2s ease, border-color .2s ease, box-shadow .25s ease, color .2s ease;
+}
+/* the specular: a soft light that sits where the pointer is (set by field.js), only while hovered */
+.glass-interactive::after, .dash-pill::after, .dash-lang-btn::after, .dash-avatar::after, .dash-alert-btn::after,
+.dash-combo::after, .field-link::after, .dash-btn::after, .dash-panel-action::after, .rot-go::after, .clim-advice-go::after,
+.field-expand::after, .field-hint::after, .dash-tabs [role="tab"]::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120px circle at var(--gx, 50%) var(--gy, 0%), var(--glass-specular), transparent 65%);
+  opacity: 0; transition: opacity .25s ease;
+}
+:is(.glass-interactive, .dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn, .dash-combo, .field-link, .dash-btn,
+  .dash-panel-action, .rot-go, .clim-advice-go, .field-expand, .field-hint, .dash-tabs [role="tab"]):hover::after { opacity: 1; }
+:is(.dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn, .dash-combo, .field-link, .dash-btn-secondary,
+  .dash-panel-action, .rot-go, .clim-advice-go, .field-expand, .field-hint):hover {
+  border-color: rgba(170, 215, 255, .38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), inset 0 -1px 0 rgba(255, 255, 255, .06), 0 0 16px rgba(80, 160, 255, .22), var(--glass-shadow-sm);
+}
+/* feedback lives on the press, and it is instant */
+:is(.glass-interactive, .dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn, .dash-combo, .field-link, .dash-btn,
+  .dash-panel-action, .rot-go, .clim-advice-go, .field-expand, .field-hint, .clim-run, .dash-tabs [role="tab"], .mode-switch button):active {
+  transform: scale(.965); transition-duration: .09s;
+}
+.dash-btn:disabled { transform: none; }
+
+/* ---------------------------------------------------------------- navigation capsule with a morphing indicator */
+.dash-nav { position: relative; gap: 2px !important; padding: 4px; border-radius: var(--glass-r-pill); }
+.dash-nav a { z-index: 1; border: 0 !important; background: transparent !important; box-shadow: none !important; color: rgba(225, 235, 248, .78) !important; }
+.dash-nav a:hover { color: #fff !important; }
+.dash-nav a[aria-current="page"] { color: #fff !important; text-shadow: 0 1px 2px rgba(0, 20, 60, .5); }
+.nav-glow {
+  position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0; width: var(--nw, 0px); border-radius: var(--glass-r-pill);
+  transform: translateX(var(--nx, 0px)); opacity: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .05) 52%, rgba(255, 255, 255, 0) 100%),
+    linear-gradient(180deg, rgba(56, 150, 255, .62), rgba(24, 92, 210, .58));
+  view-transition-name: dalaviy-nav-active;
+}
+.nav-glow.is-ready { opacity: 1; transition: transform .42s var(--glass-ease), width .42s var(--glass-ease), opacity .2s ease, filter .3s ease; }
+.dash-nav.is-hovering .nav-glow { filter: brightness(1.12); }
+/* the old per-link pill is replaced by the indicator */
+.dash-nav a[aria-current="page"] { view-transition-name: none; }
+
+/* ---------------------------------------------------------------- scroll edge effect under the sticky bar */
+.dash-top { isolation: isolate; }
+.dash-top::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; bottom: -26px; z-index: -1; pointer-events: none;
+  opacity: 0; transition: opacity .3s ease;
+  background: linear-gradient(180deg, rgba(4, 10, 21, .9) 0%, rgba(4, 10, 21, .78) 62%, rgba(4, 10, 21, 0) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%); mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+}
+.dash-top.is-stuck { background: transparent !important; border-bottom-color: transparent !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.dash-top.is-stuck::before { opacity: 1; }
+
+/* ---------------------------------------------------------------- popovers and dropdowns materialize from their trigger */
+.dash-pop, .dash-listbox { border-radius: var(--glass-r-pop); animation: glass-in .22s var(--glass-ease) both; }
+.dash-listbox li { animation: glass-item .24s var(--glass-ease) both; animation-delay: calc(min(var(--li, 0), 8) * 18ms); }
+.dash-listbox li.is-active { background: var(--glass-active); }
+.dash-listbox li[aria-selected="true"] { background: rgba(62, 197, 255, .14); }
+@keyframes glass-in { from { opacity: 0; transform: translateY(-4px) scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes glass-item { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.opens-up > .dash-listbox { animation-name: glass-in-up; }
+@keyframes glass-in-up { from { opacity: 0; transform: translateY(4px) scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+
+/* ---------------------------------------------------------------- modals: strongest material, dimmed background */
+.dash-dialog { border-radius: var(--glass-r-modal); }
+.dash-dialog[open], dialog.fullscreen-map-dialog[open] { animation: glass-modal-in .34s var(--glass-ease) both; }
+.dash-dialog::backdrop, dialog.fullscreen-map-dialog::backdrop { background: rgba(2, 6, 14, .55); -webkit-backdrop-filter: blur(6px) saturate(.9); backdrop-filter: blur(6px) saturate(.9); animation: glass-fade .3s ease both; }
+@keyframes glass-modal-in { from { opacity: 0; transform: translateY(10px) scale(.975); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes glass-fade { from { opacity: 0; } to { opacity: 1; } }
+dialog.fullscreen-map-dialog .map-tools { --g-a: .6; --g-blur: var(--glass-blur-pop); border-radius: 16px; padding: 14px !important; }
+
+/* ---------------------------------------------------------------- content layer: quiet translucency, no blur */
+.glass-panel-subtle, .dash-panel, .metric, .cmetric, .dash-score, .rot-row, .view-card, .news-card, .basis-card, .draw-tools {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+.glass-panel-subtle, .dash-panel, .view-card, .news-card, .basis-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .045) 0%, rgba(255, 255, 255, 0) 38%), linear-gradient(180deg, rgba(14, 30, 58, var(--glass-a-panel)), rgba(7, 17, 36, .72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 14px 36px rgba(0, 0, 0, .28);
+}
+.metric, .dash-score { background: linear-gradient(180deg, rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, 0) 45%), rgba(10, 22, 44, .6); }
+.cmetric { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 0 calc(var(--u) * 18) rgba(var(--tone), .14); }
+.cmetric:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), 0 0 calc(var(--u) * 28) rgba(var(--tone), .3), 0 10px 26px rgba(0, 0, 0, .3); }
+
+/* recommendation: green light that follows interest, never pulses on its own */
+.clim-advice { transition: box-shadow .35s ease, border-color .35s ease, transform .35s var(--glass-ease); }
+.clim-advice:hover { border-color: #6cf0a6; box-shadow: 0 0 calc(var(--u) * 36) rgba(61, 220, 132, .42), inset 0 0 calc(var(--u) * 36) rgba(61, 220, 132, .12); }
+.clim-advice:hover .clim-advice-go { transform: translateX(3px); }
+.clim-advice-go { --g-a: .5; border-color: rgba(110, 240, 170, .6) !important; color: #b9f8d4; }
+
+/* the current-rotation picker reads as text inside the field card, not as a glass control */
+.field-current .dash-combo { background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* ---------------------------------------------------------------- no glass on glass
+   A control that sits on a content panel keeps the tint, rim and specular but does not blur again: its backdrop is
+   the panel itself, so a second blur adds nothing visible and, over the playing background video, costs a GPU pass
+   per frame for every such control. Controls floating over the map or the video (field-expand, field-hint) keep it. */
+.dash-panel :is(.dash-combo, .field-link, .dash-panel-action, .mode-switch, .dash-btn, .dash-btn-secondary, .rot-go, .clim-advice-go, .dash-listbox),
+.rot-list .rot-go {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.dash-panel .dash-listbox { background: rgba(12, 26, 48, .97); }
+
+/* ---------------------------------------------------------------- performance
+   Small header controls sit right over the playing background video: a backdrop blur on each of them is
+   recomputed on every video frame. The nav capsule and the sticky bar keep their blur (they carry the
+   material); the small controls keep the tint, rim and specular, slightly denser, without their own blur. */
+.dash-top :is(.dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn) {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .09) 0%, rgba(255, 255, 255, .02) 46%, rgba(255, 255, 255, 0) 100%),
+    rgba(var(--glass-rgb), .72);
+}
+/* sections below the first screen are not laid out or painted until they come near the viewport */
+#news-section, #basis-section, .clim-bottom, .crop-method, .rep .card.dash-panel[data-reveal] {
+  content-visibility: auto; contain-intrinsic-size: auto 640px;
+}
+
+/* ---------------------------------------------------------------- page entrance: background > video > header > content */
+.dash .dash-bg { animation: glass-fade .35s ease both; }
+.dash .dash-video { animation: glass-fade .5s ease both; }
+
+/* ---------------------------------------------------------------- idle animations stop when nothing is shown */
+.dash-loading[hidden] .dash-spinner { animation-play-state: paused; }
+
+/* ---------------------------------------------------------------- fallbacks */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  :root { --glass-a-nav: .9; --glass-a-control: .86; --glass-a-pop: .96; --glass-a-modal: .96; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-a-nav: .97; --glass-a-control: .95; --glass-a-pop: .99; --glass-a-modal: .99; --glass-a-panel: .96; }
+  .dash-nav, .dash-pill, .dash-lang-btn, .dash-avatar, .dash-alert-btn, .dash-combo, .dash-tabs, .mode-switch, .field-link,
+  .dash-btn-secondary, .dash-panel-action, .rot-go, .clim-advice-go, .field-expand, .field-hint, .dash-pop, .dash-listbox,
+  .dash-dialog, .dash-top::before, .glass-navigation, .glass-control, .glass-dropdown, .glass-popover, .glass-modal {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --glass-rim: rgba(255, 255, 255, .6); --glass-a-nav: .95; --glass-a-control: .95; --glass-a-pop: .99; --glass-a-modal: .99; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-pop, .dash-listbox, .dash-listbox li, .dash-dialog[open], dialog.fullscreen-map-dialog[open], .dash .dash-bg, .dash .dash-video { animation: none !important; }
+  .nav-glow.is-ready { transition: opacity .2s ease; }
+  :is(.dash-btn, .dash-combo, .dash-pill, .rot-go, .clim-run):active { transform: none; }
+}

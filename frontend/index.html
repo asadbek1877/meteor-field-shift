@@ -1,120 +1,405 @@
 <!doctype html>
-<html lang="uz">
+<html lang="uz" class="dash-page">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TerraShift</title>
   <meta name="description" content="Compare crop rotations for your field with 35 years of NASA climate data.">
+  <script src="/transitions.js?v=20261116"></script>
   <link rel="stylesheet" href="/vendor/leaflet.css">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?v=20261116">
+  <link rel="stylesheet" href="/hero.css?v=20261116">
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-latin.woff2" crossorigin>
+  <link rel="stylesheet" href="/field.css?v=20261116">
+  <link rel="stylesheet" href="/glass.css?v=20261116">
+  <link rel="stylesheet" href="/transitions.css?v=20261116">
+  <link rel="stylesheet" href="/terra-extra.css">
+  <script type="speculationrules">{"prefetch": [{"where": {"selector_matches": ".dash-nav a, .site-nav a"}, "eagerness": "moderate"}]}</script>
+  <link rel="preload" as="image" href="/media/space-poster.webp" fetchpriority="high">
 </head>
 <body data-page="home" data-title="page_title_home">
   <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
-    <a class="brand" href="/" aria-label="TerraShift">
-      <span class="logo" aria-hidden="true"></span>
-      <span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span>
-    </a>
-    <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/" data-page-link="home" data-t="nav_home"></a>
-      <a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
-      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a>
-      <a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
-      <a href="/current.html" data-page-link="current" data-t="nav_now"></a>
-      <a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
-    </nav>
-    <div class="top-actions">
-      <div id="chips" class="chips" aria-live="polite"></div>
-      <div class="seg" role="group" data-t-aria="language_group">
-        <button type="button" data-lang="uz">UZ</button>
-        <button type="button" data-lang="en">EN</button>
+  <!-- Landing journey: three full-screen scenes over one continuous camera move
+       (space, approach, surface). Styles in hero.css, scene controller in hero.js. -->
+  <div class="journey" id="journey" data-scene="1" role="region" data-t-aria="journey_label">
+    <script>(function (j) {
+      if (location.hash === "#app") { j.hidden = true; return; }
+      document.documentElement.classList.add("journey-on");
+      j.classList.add("is-armed");
+    })(document.currentScript.parentElement);</script>
+    <div class="journey-stage" aria-hidden="true">
+      <video class="jv jv-1" data-video="space" data-src="/media/space.mp4" poster="/media/space-poster.webp"
+        muted loop playsinline preload="auto" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      <video class="jv jv-2" data-video="approach" data-src="/media/approach.mp4"
+        muted playsinline preload="none" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      <video class="jv jv-3" data-video="surface" data-src="/media/surface.mp4" poster="/media/surface-poster.webp"
+        muted playsinline preload="none" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      <div class="space-fx">
+        <div class="hero-glow"></div>
+        <canvas class="hero-stars"></canvas>
       </div>
-      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
+      <div class="journey-flare"></div>
+      <div class="scrim scrim-1"></div>
+      <div class="scrim scrim-3"></div>
+      <div class="journey-vignette"></div>
     </div>
-  </header>
-  <div id="warnings" class="warnings" aria-live="polite"></div>
-  <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
 
-  <main class="layout home-layout" id="main-content">
-    <aside class="side">
-      <section class="card">
-        <h2 data-t="field_title"></h2>
-        <p class="hint" data-t="field_hint"></p>
-        <div id="map-workspace" class="map-workspace">
-          <div id="map" class="map" role="application" data-t-aria="map_label"></div>
-          <div id="map-tools" class="map-tools">
-            <form class="field-search" id="place-form" role="search" autocomplete="off">
-              <label class="field" for="place-search"><span data-t="place_search_label"></span></label>
-              <div class="search-row">
-                <input id="place-search" type="search" enterkeyhint="search" data-t-placeholder="place_search_placeholder"
-                  aria-autocomplete="list" aria-controls="place-results" aria-expanded="false">
-                <button type="submit" id="place-go" class="btn primary" data-t="place_search_button"></button>
-              </div>
-              <p class="hint" data-t="place_search_hint"></p>
-              <ul id="place-results" class="place-results" role="listbox" data-t-aria="place_results_label" hidden></ul>
-              <p id="place-search-status" class="hint" role="status" aria-live="polite" aria-atomic="true"></p>
-              <p id="place-info" class="hint place-info" aria-live="polite"></p>
-              <a class="search-attribution" href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener" data-t="place_search_attribution"></a>
-            </form>
-            <div class="row wrap">
-              <button type="button" id="locate" class="btn primary" data-t="locate"></button>
-              <span id="coords" class="mono muted"></span>
-            </div>
-            <p id="locate-msg" class="hint warn-text" hidden></p>
-            <label class="field"><span data-t="map_layer"></span><select id="layer"></select></label>
-            <label class="field" id="opacity-row" hidden>
-              <span data-t="layer_opacity"></span>
-              <input type="range" id="opacity" min="20" max="100" value="70">
-            </label>
-          </div>
+    <!-- Scene 1: space -->
+    <section class="scene-ui ui-1" aria-labelledby="hero-title">
+      <div class="hero-nav" data-enter="down" style="--d: 2500">
+        <a class="hero-brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span>TerraShift</a>
+        <nav class="hero-links" data-t-aria="main_nav_label">
+          <a href="/rotations.html" data-t="nav_rotations"></a>
+          <a href="/climate.html" data-t="nav_climate"></a>
+          <a href="/crops.html" data-t="nav_crops"></a>
+          <a href="/sources.html" data-t="nav_sources"></a>
+        </nav>
+        <div class="hero-lang" role="group" data-t-aria="language_group">
+          <button type="button" data-lang="uz">UZ</button>
+          <button type="button" data-lang="en">EN</button>
         </div>
-        <button type="button" id="open-map" class="btn ghost" data-t="map_fullscreen_open"></button>
-      </section>
-      <section class="card">
-        <h2 data-t="passport_title"></h2>
-        <label class="field"><span data-t="current_rotation"></span><select id="current"></select></label>
-        <div id="builder" class="builder" hidden>
-          <p class="hint" data-t="builder_hint"></p>
-          <div id="builder-years"></div>
-          <div class="row wrap">
-            <button type="button" id="add-year" class="btn ghost" data-t="add_year"></button>
-            <button type="button" id="remove-year" class="btn ghost" data-t="remove_year"></button>
-          </div>
-        </div>
-        <label class="field"><span data-t="irrigation_method"></span><select id="irrigation"></select></label>
-        <label class="field"><span data-t="soil_type"></span><select id="soil"></select></label>
-        <p id="soil-note" class="hint"></p>
-      </section>
-      <section class="card">
-        <h2 data-t="priorities_title"></h2>
-        <p class="hint" data-t="priorities_hint"></p>
-        <div id="sliders"></div>
-      </section>
-    </aside>
-    <section class="content">
-      <section id="suit-card" class="card suit" aria-live="polite" hidden></section>
-      <section class="card verdict" aria-labelledby="verdict">
-        <div class="eyebrow" data-t="verdict_eyebrow"></div>
-        <h1 id="verdict" data-t="loading"></h1>
-        <p id="verdict-sub" class="lead"></p>
-        <ul id="advice-top" class="advice"></ul>
-        <a class="btn primary" href="/rotations.html" data-t="full_comparison"></a>
-      </section>
-      <section id="week-card" class="card week" aria-labelledby="week-plan-title" hidden></section>
-      <section id="region-card" class="card region" aria-labelledby="region-title" hidden></section>
+      </div>
+      <div class="hero-copy">
+        <p class="hero-eyebrow" data-enter style="--d: 1100; --o: 60" data-t="hero_eyebrow"></p>
+        <h1 class="hero-title" id="hero-title">
+          <span class="hero-title-top" data-enter style="--d: 1300; --o: 100" data-t="hero_title_top"></span>
+          <span class="hero-title-main" data-enter style="--d: 1480; --o: 140"><span data-t="hero_title_strong"></span> <span class="hero-accent" data-t="hero_title_accent"></span></span>
+        </h1>
+        <p class="hero-lead" data-enter style="--d: 1700; --o: 180" data-t="hero_lead"></p>
+        <button type="button" class="hero-cta" id="journey-start" data-enter style="--d: 1920; --o: 120">
+          <span data-t="hero_cta"></span>
+          <span class="hero-cta-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></span>
+        </button>
+        <ul class="hero-feats">
+          <li data-enter style="--d: 2150; --o: 220">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 9.5 5 5M7 12l-4-4 4-4 4 4M17 20l-4-4 4-4 4 4M12 7l5 5-5 5-5-5zM4 17a3 3 0 0 0 3 3M2.5 18.5A5 5 0 0 0 5.5 21.5"/></svg>
+            <span data-t="hero_feat_satellite"></span>
+          </li>
+          <li data-enter style="--d: 2270; --o: 250">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg>
+            <span data-t="hero_feat_analysis"></span>
+          </li>
+          <li data-enter style="--d: 2390; --o: 280">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-14 15-14 0 9-5 14-13 14M4 21c2-6 6-9 11-11"/></svg>
+            <span data-t="hero_feat_farming"></span>
+          </li>
+        </ul>
+      </div>
     </section>
-  </main>
 
-  <dialog id="map-dialog" class="fullscreen-map-dialog" aria-labelledby="map-dialog-title">
-    <div class="dialog-head">
-      <h2 id="map-dialog-title" data-t="map_fullscreen_title"></h2>
-      <button type="button" id="close-map" class="btn ghost" data-t="map_fullscreen_close" autofocus></button>
+    <!-- Scene 3: surface. Scene 2 (the approach) is video only. -->
+    <section class="scene-ui ui-3" aria-labelledby="feature-title" inert>
+      <div class="hero-nav" data-enter="down" style="--d: 1300">
+        <button type="button" class="hero-brand" id="journey-restart" data-t-aria="journey_restart"><span class="logo" aria-hidden="true"></span>TerraShift</button>
+        <div class="hero-lang" role="group" data-t-aria="language_group">
+          <button type="button" data-lang="uz">UZ</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </div>
+      <div class="feature-copy">
+        <p class="feature-tag" data-enter style="--d: 150">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z"/><path d="m4.2 10.6 7.8 3.9 7.8-3.9L22 11.7l-10 5-10-5z" opacity=".8"/><path d="m4.2 15.3 7.8 3.9 7.8-3.9 2.2 1.1-10 5-10-5z" opacity=".6"/></svg>
+          <span class="num" aria-hidden="true">01&nbsp;&nbsp;/</span>
+          <span data-t="feature_tag"></span>
+        </p>
+        <h2 class="feature-title" id="feature-title" tabindex="-1">
+          <span data-enter style="--d: 330" data-t="feature_title"></span>
+          <span class="hero-accent" data-enter style="--d: 500" data-t="feature_title_accent"></span>
+        </h2>
+        <p class="feature-lead" data-enter style="--d: 700" data-t="feature_lead"></p>
+        <ul class="feature-tiles">
+          <li data-enter style="--d: 920"><a class="feature-tile is-primary" href="#app" data-journey-exit>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-9M12 13C12 9 9.5 6.5 5 6.5c0 4.5 2.5 6.5 7 6.5ZM12 11c0-4 2.5-6.5 7-6.5 0 4.5-2.5 6.5-7 6.5ZM6 20h12"/></svg>
+            <span data-t="feature_tile_land"></span></a></li>
+          <li data-enter style="--d: 1040"><a class="feature-tile" href="/climate.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 16a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 9.2 3.5 3.5 0 0 1 17 16ZM9 19l-.5 1.5M12.5 19l-.5 1.5M16 19l-.5 1.5"/></svg>
+            <span data-t="feature_tile_weather"></span></a></li>
+          <li data-enter style="--d: 1160"><a class="feature-tile" href="/crops.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg>
+            <span data-t="feature_tile_resources"></span></a></li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <!-- Field section (Dala): rotation dashboard over the satellite video.
+       Styles in field.css, data rendering in app.js (renderDashboard), UI behaviour in field.js. -->
+  <div id="app" class="app-shell dash" data-in-root>
+    <div data-shell-sprite></div>
+
+    <!-- background: video, atmosphere, vignette (never interactive) -->
+    <div class="dash-bg" aria-hidden="true">
+      <div class="dash-video-box">
+        <video class="dash-video" id="dash-video" data-src="/media/field.mp4" poster="/media/field-poster.webp"
+          muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback tabindex="-1"></video>
+      </div>
+      <div class="dash-atmos"></div>
+      <div class="dash-vignette"></div>
     </div>
-    <div id="fullscreen-map-host" class="fullscreen-map-host"></div>
-  </dialog>
+
+    <header data-shell-header></header>
+    <script src="/shell.js?v=20261116"></script>
+    <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+
+    <main class="dash-main" id="main-content">
+      <!-- verdict + headline metrics -->
+      <section class="dash-head" aria-labelledby="verdict">
+        <div class="dash-intro">
+          <p class="dash-eyebrow" data-in style="--i: 1"><span class="dash-slashes" aria-hidden="true">///</span><span data-t="dash_eyebrow"></span><span class="mode-chip" data-t="mode_result_manual"></span></p>
+          <h1 id="verdict" class="dash-title" data-rich data-in style="--i: 2"><span class="dash-skel w-80"></span><span class="dash-skel w-60"></span></h1>
+          <p id="verdict-sub" class="dash-lead" data-in style="--i: 3"></p>
+        </div>
+        <div class="dash-score" data-in style="--i: 4">
+          <span class="dash-score-ico ico-green"><svg><use href="#i-leaf"/></svg></span>
+          <span class="dash-score-txt"><span class="dash-score-val"><b id="m-total">–</b><small>/100</small></span><span data-t="m_top"></span></span>
+        </div>
+        <ul class="dash-metrics" id="metrics">
+          <li class="metric" data-in style="--i: 5"><span class="metric-ico ico-blue"><svg><use href="#i-drop"/></svg></span>
+            <span class="metric-txt"><span data-t="m_water_save"></span><b id="m-water">–</b></span></li>
+          <li class="metric" data-in style="--i: 6"><span class="metric-ico ico-violet"><svg><use href="#i-layers"/></svg></span>
+            <span class="metric-txt"><span data-t="m_soil_gain"></span><b id="m-soil-gain">–</b></span></li>
+          <li class="metric" data-in style="--i: 7"><span class="metric-ico ico-green"><svg><use href="#i-growth"/></svg></span>
+            <span class="metric-txt"><span data-t="m_income"></span><b id="m-income">–</b></span></li>
+          <li class="metric" data-in style="--i: 8"><span class="metric-ico ico-teal"><svg><use href="#i-soil"/></svg></span>
+            <span class="metric-txt"><span data-t="m_soil_health"></span><b><span id="m-soil">–</span><small>/ 100</small></b></span></li>
+        </ul>
+      </section>
+
+      <!-- field, analysis settings and results -->
+      <div class="dash-work" id="work" data-reveal>
+      <aside class="dash-side">
+        <section class="dash-panel" aria-labelledby="panel-field" data-in style="--i: 6">
+          <h2 class="dash-panel-title" id="panel-field"><svg><use href="#i-scan"/></svg><span data-t="panel_field"></span></h2>
+          <div class="field-media">
+            <div id="map-workspace" class="map-workspace">
+              <div id="map" class="map" role="application" data-base="satellite" data-t-aria="map_label"></div>
+              <div id="map-tools" class="map-tools">
+                <section class="draw-tools" aria-labelledby="draw-title">
+                  <h3 id="draw-title" class="draw-title"><svg><use href="#i-polygon"/></svg><span data-t="draw_title"></span></h3>
+                  <p id="draw-status" class="draw-status" aria-live="polite"></p>
+                  <div class="draw-area"><span data-t="draw_area"></span><b id="draw-area">–</b><small id="draw-points"></small></div>
+                  <div class="draw-actions">
+                    <button type="button" id="draw-start" class="dash-btn dash-btn-primary"><svg><use href="#i-polygon"/></svg><span data-t="draw_start"></span></button>
+                    <button type="button" id="draw-undo" class="dash-btn dash-btn-secondary" disabled><svg><use href="#i-undo"/></svg><span data-t="draw_undo"></span></button>
+                    <button type="button" id="draw-clear" class="dash-btn dash-btn-secondary" disabled><svg><use href="#i-trash"/></svg><span data-t="draw_clear"></span></button>
+                  </div>
+                  <p id="draw-error" class="draw-error" role="alert" hidden></p>
+                  <div class="draw-final">
+                    <button type="button" id="draw-cancel" class="dash-btn dash-btn-secondary"><span data-t="draw_cancel"></span></button>
+                    <button type="button" id="draw-apply" class="dash-btn dash-btn-primary" disabled><svg><use href="#i-check"/></svg><span data-t="draw_apply"></span></button>
+                  </div>
+                </section>
+                <div class="field-search">
+                  <label class="field" for="place-search">
+                    <span data-t="place_search_label"></span>
+                    <input id="place-search" type="search" autocomplete="off" data-t-placeholder="place_search_placeholder"
+                      aria-autocomplete="list" aria-controls="place-results" aria-expanded="false">
+                  </label>
+                  <p class="hint" data-t="place_search_hint"></p>
+                  <ul id="place-results" class="place-results" role="listbox" data-t-aria="place_results_label" hidden></ul>
+                  <p id="place-search-status" class="hint" role="status" aria-live="polite" aria-atomic="true"></p>
+                  <p id="place-info" class="hint place-info" aria-live="polite"></p>
+                  <a class="search-attribution" href="https://photon.komoot.io/" target="_blank" rel="noopener" data-t="place_search_attribution"></a>
+                </div>
+                <div class="row wrap">
+                  <button type="button" id="locate" class="btn primary" data-t="locate"></button>
+                  <span id="coords" class="mono muted"></span>
+                </div>
+                <p id="locate-msg" class="hint warn-text" hidden></p>
+                <details class="map-more">
+                  <summary data-t="map_more"></summary>
+                  <div id="presets" class="row wrap"></div>
+                  <label class="field"><span data-t="map_layer"></span><select id="layer"></select></label>
+                  <label class="field" id="opacity-row" hidden>
+                    <span data-t="layer_opacity"></span>
+                    <input type="range" id="opacity" min="20" max="100" value="70">
+                  </label>
+                </details>
+              </div>
+            </div>
+            <button type="button" id="open-map" class="field-expand" data-t-aria="map_fullscreen_open"><svg><use href="#i-expand"/></svg></button>
+            <button type="button" class="field-hint" data-open-map><svg><use href="#i-polygon"/></svg><span data-t="map_open_hint"></span></button>
+          </div>
+          <ul class="field-facts">
+            <li><svg><use href="#i-pin"/></svg><span id="field-place" class="field-place">–</span></li>
+            <li><svg><use href="#i-target"/></svg><span id="field-coords" class="field-coords">–</span></li>
+            <li class="field-area-row"><svg><use href="#i-area"/></svg><span id="field-area" class="field-area">–</span>
+              <button type="button" class="field-link" data-draw><span data-t="draw_boundary"></span></button></li>
+            <li class="field-total-row"><p id="field-total" class="dash-total" hidden></p></li>
+            <li><svg><use href="#i-wheat"/></svg>
+              <label class="field-current"><span class="sr-only" data-t="current_rotation"></span><select id="current"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></label></li>
+          </ul>
+        </section>
+
+        <section class="dash-panel" aria-labelledby="panel-settings" data-in style="--i: 7">
+          <h2 class="dash-panel-title" id="panel-settings"><svg><use href="#i-gear"/></svg><span data-t="panel_settings"></span>
+            <button type="button" class="dash-panel-action" data-open-prefs data-t-aria="prefs_title"><svg><use href="#i-sliders"/></svg></button></h2>
+          <div class="mode-switch" role="radiogroup" data-t-aria="mode_label">
+            <button type="button" role="radio" aria-checked="true" data-mode="auto"><span data-t="mode_auto"></span></button>
+            <button type="button" role="radio" aria-checked="false" data-mode="manual"><span data-t="mode_manual"></span></button>
+          </div>
+          <p class="mode-note" id="mode-note"></p>
+
+          <div id="mode-auto" class="mode-pane">
+            <div class="set-row">
+              <label for="irrigation"><svg><use href="#i-drop"/></svg><span data-t="set_irrigation"></span></label>
+              <span class="dash-select"><select id="irrigation"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span>
+            </div>
+            <div class="set-row">
+              <label for="soil"><svg><use href="#i-layers"/></svg><span data-t="set_soil"></span></label>
+              <span class="dash-select"><select id="soil"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span>
+            </div>
+            <div class="set-row">
+              <label for="period"><svg><use href="#i-calendar"/></svg><span data-t="set_period"></span></label>
+              <span class="dash-select"><select id="period"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span>
+            </div>
+          </div>
+
+          <form id="manual-form" class="mode-pane manual" novalidate hidden>
+            <fieldset>
+              <legend data-t="mf_field"></legend>
+              <label class="mf-row" for="mf-name"><span data-t="mf_name"></span>
+                <input id="mf-name" type="text" maxlength="60" autocomplete="off" data-t-placeholder="mf_name_ph"></label>
+              <div class="mf-row"><span data-t="draw_area"></span>
+                <span class="mf-value"><b id="mf-area">–</b><button type="button" class="field-link" data-draw><span data-t="draw_boundary"></span></button></span></div>
+              <div class="mf-row"><span data-t="mf_location"></span><span class="mf-value" id="mf-location">–</span></div>
+            </fieldset>
+            <fieldset>
+              <legend data-t="mf_soil_water"></legend>
+              <div class="mf-row"><label for="mf-soil" data-t="set_soil"></label>
+                <span class="dash-select"><select id="mf-soil"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+              <div class="mf-row"><label for="mf-irrigation" data-t="set_irrigation"></label>
+                <span class="dash-select"><select id="mf-irrigation"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+            </fieldset>
+            <fieldset>
+              <legend data-t="mf_crops"></legend>
+              <p class="mf-hint" data-t="mf_crops_hint"></p>
+              <div class="mf-row"><label for="mf-prev" data-t="mf_prev"></label>
+                <span class="dash-select"><select id="mf-prev"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+              <div class="mf-row"><label for="mf-crop" data-t="mf_current"></label>
+                <span class="dash-select"><select id="mf-crop"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+              <div class="mf-row"><label for="mf-next" data-t="mf_next"></label>
+                <span class="dash-select"><select id="mf-next"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+            </fieldset>
+            <fieldset>
+              <legend data-t="mf_config"></legend>
+              <div class="mf-row"><label for="mf-period" data-t="set_period"></label>
+                <span class="dash-select"><select id="mf-period"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+              <div class="mf-row"><span data-t="prefs_title"></span>
+                <button type="button" class="field-link" data-open-prefs><span id="mf-weights">–</span></button></div>
+            </fieldset>
+            <p class="mf-error" id="mf-error" role="alert" hidden></p>
+            <div class="mf-actions">
+              <button type="submit" class="dash-btn dash-btn-primary" id="mf-run"><svg><use href="#i-flask"/></svg><span data-t="mf_run"></span></button>
+            </div>
+          </form>
+        </section>
+      </aside>
+
+      <!-- right: analysis views -->
+      <section class="dash-content content" id="content" data-t-aria="dash_eyebrow">
+        <div class="dash-tabs" role="tablist" data-in style="--i: 8">
+          <button type="button" role="tab" id="tab-compare" aria-controls="view-compare" aria-selected="true"><svg><use href="#i-layers"/></svg><span data-t="tab_compare"></span></button>
+          <button type="button" role="tab" id="tab-chart" aria-controls="view-chart" aria-selected="false" tabindex="-1"><svg><use href="#i-chart"/></svg><span data-t="tab_chart"></span></button>
+          <button type="button" role="tab" id="tab-trend" aria-controls="view-trend" aria-selected="false" tabindex="-1"><svg><use href="#i-trend"/></svg><span data-t="tab_trend"></span></button>
+        </div>
+        <p class="dash-loading" id="dash-loading" role="status"><span class="dash-spinner" aria-hidden="true"></span><span data-t="loading_dash"></span></p>
+        <div class="dash-banner" id="dash-banner" role="alert" hidden></div>
+
+        <div class="dash-views">
+          <div class="dash-view" role="tabpanel" id="view-compare" aria-labelledby="tab-compare">
+            <div class="rot-list" id="rot-list">
+              <div class="rot-row is-skel"></div><div class="rot-row is-skel"></div><div class="rot-row is-skel"></div><div class="rot-row is-skel"></div><div class="rot-row is-skel"></div>
+            </div>
+          </div>
+
+          <div class="dash-view" role="tabpanel" id="view-chart" aria-labelledby="tab-chart" hidden>
+            <div class="view-card">
+              <div class="view-head"><h3 data-t="chart_title"></h3><span class="muted small" id="rotations-meta"></span></div>
+              <div class="chart-box"><canvas id="scores-chart" role="img" data-t-aria="chart_title"></canvas></div>
+              <ul id="advice-top" class="dash-advice"></ul>
+              <a class="dash-link" href="/rotations.html"><span data-t="full_comparison"></span><svg><use href="#i-arrow"/></svg></a>
+            </div>
+          </div>
+
+          <div class="dash-view" role="tabpanel" id="view-trend" aria-labelledby="tab-trend" hidden>
+            <div class="view-card">
+              <div class="view-head"><h3 data-t="trend_title"></h3>
+                <span class="dash-select"><select id="metric" data-t-aria="trend_metric"></select><svg class="ico-sm"><use href="#i-chevron"/></svg></span></div>
+              <div class="chart-box"><canvas id="annual-chart" role="img" data-t-aria="trend_title"></canvas></div>
+              <p class="muted small" data-t="trend_note"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <!-- agricultural updates generated from this analysis (no external news provider is connected) -->
+      <section class="dash-section" id="news-section" aria-labelledby="news-title" data-reveal>
+        <div class="section-head">
+          <div>
+            <p class="dash-eyebrow"><span class="dash-slashes" aria-hidden="true">///</span><span data-t="news_eyebrow"></span></p>
+            <h2 id="news-title" class="section-title" data-t="news_title"></h2>
+            <p class="section-sub" data-t="news_sub"></p>
+          </div>
+          <span class="news-new" id="news-new" hidden><svg><use href="#i-bell"/></svg><b id="news-count">0</b><span data-t="news_new"></span></span>
+        </div>
+        <ul class="news-list" id="news-list" aria-live="polite"></ul>
+      </section>
+
+      <!-- what the analysis rests on: user inputs, data sources and their kind -->
+      <section class="dash-section" id="basis-section" aria-labelledby="basis-title" data-reveal>
+        <div class="section-head">
+          <div>
+            <p class="dash-eyebrow"><span class="dash-slashes" aria-hidden="true">///</span><span data-t="basis_eyebrow"></span></p>
+            <h2 id="basis-title" class="section-title" data-t="basis_title"></h2>
+          </div>
+        </div>
+        <div class="basis-grid">
+          <div class="basis-card"><h3 data-t="basis_inputs"></h3><ul id="basis-inputs" class="basis-list"></ul></div>
+          <div class="basis-card"><h3 data-t="basis_sources"></h3><ul id="basis-sources" class="basis-list"></ul></div>
+        </div>
+        <p class="basis-disclaimer" id="basis-disclaimer"></p>
+      </section>
+    </main>
+
+    <!-- priorities, own rotation builder and soil note -->
+    <dialog id="prefs-dialog" class="dash-dialog" aria-labelledby="prefs-title">
+      <div class="dash-dialog-head">
+        <h2 id="prefs-title" data-t="prefs_title"></h2>
+        <button type="button" class="dash-close" data-close-dialog data-t-aria="close">&times;</button>
+      </div>
+      <p class="hint" data-t="priorities_hint"></p>
+      <div id="sliders"></div>
+      <div id="builder" class="builder" hidden>
+        <h3 data-t="current_rotation"></h3>
+        <p class="hint" data-t="builder_hint"></p>
+        <div id="builder-years"></div>
+        <div class="row wrap">
+          <button type="button" id="add-year" class="btn ghost" data-t="add_year"></button>
+          <button type="button" id="remove-year" class="btn ghost" data-t="remove_year"></button>
+        </div>
+      </div>
+      <p id="soil-note" class="hint"></p>
+    </dialog>
+
+    <dialog id="map-dialog" class="fullscreen-map-dialog" aria-labelledby="map-dialog-title">
+      <div class="dialog-head">
+        <h2 id="map-dialog-title" data-t="map_fullscreen_title"></h2>
+        <button type="button" id="close-map" class="btn ghost" data-t="map_fullscreen_close" autofocus></button>
+      </div>
+      <div id="fullscreen-map-host" class="fullscreen-map-host"></div>
+    </dialog>
+  </div>
 
   <script src="/vendor/leaflet.js"></script>
-  <script src="/i18n.js"></script>
-  <script src="/app.js"></script>
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/i18n.js?v=20261116"></script>
+  <script src="/terra-extra.js"></script>
+  <script src="/app.js?v=20261116"></script>
+  <script src="/hero.js?v=20261116"></script>
+  <script src="/field.js?v=20261116"></script>
 </body>
 </html>

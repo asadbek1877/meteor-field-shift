@@ -1,5 +1,5 @@
 {
-  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22. sow_doy is only a fallback: the sowing date is computed for each point from its NASA POWER temperatures (or rain onset in the tropics). Heat, frost and season temperature limits are agronomy rules of thumb. revenue_usd_ha is only a fallback: income uses FAOSTAT yield x producer price of the country (backend/data/country_crops.json). Rice percolation (3 mm/day) approximates paddy losses. Mizuki must verify each value and add a source before the demo.",
+  "_note": "DRAFT values. Stage lengths, Kc, root depth and depletion fraction p follow FAO-56 (Allen et al., 1998) Tables 11, 12 and 22. sow_doy is only a fallback: the sowing date is computed for each point from its NASA POWER temperatures (or rain onset in the tropics). Heat, frost and season temperature limits are agronomy rules of thumb. revenue_usd_ha is only a fallback: income uses FAOSTAT yield x producer price of the country (backend/data/country_crops.json). Rice percolation (3 mm/day) approximates paddy losses. Mizuki must verify each value and add a source before the demo. Per crop, category groups the crops page filters; t_opt_c (favourable mid-season air temperature) and yield_t_ha (typical irrigated yield) come from the asadbek branch and are reference placeholders to verify.",
   "soils": {
     "light": {
       "awc_mm_per_m": 100,
@@ -98,7 +98,16 @@
       },
       "revenue_usd_ha": 1800,
       "fao_item": 328,
-      "season_t_min_c": 21
+      "season_t_min_c": 21,
+      "category": "technical",
+      "t_opt_c": [
+        24,
+        30
+      ],
+      "yield_t_ha": [
+        2.6,
+        3.4
+      ]
     },
     {
       "id": "winter_wheat",
@@ -146,6 +155,15 @@
         60,
         70,
         30
+      ],
+      "category": "grain",
+      "t_opt_c": [
+        15,
+        22
+      ],
+      "yield_t_ha": [
+        4.5,
+        5.8
       ]
     },
     {
@@ -188,7 +206,16 @@
       },
       "revenue_usd_ha": 1050,
       "fao_item": 191,
-      "season_t_min_c": 10
+      "season_t_min_c": 10,
+      "category": "legume",
+      "t_opt_c": [
+        15,
+        24
+      ],
+      "yield_t_ha": [
+        1.2,
+        1.8
+      ]
     },
     {
       "id": "sorghum",
@@ -230,7 +257,16 @@
       },
       "revenue_usd_ha": 800,
       "fao_item": 83,
-      "season_t_min_c": 19
+      "season_t_min_c": 19,
+      "category": "grain",
+      "t_opt_c": [
+        24,
+        32
+      ],
+      "yield_t_ha": [
+        3.0,
+        4.5
+      ]
     },
     {
       "id": "mung_bean",
@@ -266,7 +302,16 @@
       "frost": null,
       "revenue_usd_ha": 1080,
       "fao_item": 211,
-      "season_t_min_c": 20
+      "season_t_min_c": 20,
+      "category": "legume",
+      "t_opt_c": [
+        25,
+        32
+      ],
+      "yield_t_ha": [
+        1.2,
+        1.8
+      ]
     },
     {
       "id": "alfalfa",
@@ -305,7 +350,16 @@
       "frost": null,
       "revenue_usd_ha": 1200,
       "fao_item": null,
-      "season_t_min_c": 10
+      "season_t_min_c": 10,
+      "category": "legume",
+      "t_opt_c": [
+        18,
+        28
+      ],
+      "yield_t_ha": [
+        10.0,
+        14.0
+      ]
     },
     {
       "id": "maize",
@@ -347,7 +401,16 @@
       },
       "revenue_usd_ha": 1100,
       "fao_item": 56,
-      "season_t_min_c": 15
+      "season_t_min_c": 15,
+      "category": "grain",
+      "t_opt_c": [
+        22,
+        30
+      ],
+      "yield_t_ha": [
+        6.0,
+        8.5
+      ]
     },
     {
       "id": "rice",
@@ -390,7 +453,8 @@
       "revenue_usd_ha": 1500,
       "fao_item": 27,
       "season_t_min_c": 18,
-      "percolation_mm_day": 3.0
+      "percolation_mm_day": 3.0,
+      "category": "grain"
     },
     {
       "id": "soybean",
@@ -432,7 +496,16 @@
       },
       "revenue_usd_ha": 1000,
       "fao_item": 236,
-      "season_t_min_c": 15
+      "season_t_min_c": 15,
+      "category": "legume",
+      "t_opt_c": [
+        22,
+        28
+      ],
+      "yield_t_ha": [
+        2.0,
+        2.8
+      ]
     },
     {
       "id": "spring_wheat",
@@ -474,7 +547,8 @@
       },
       "revenue_usd_ha": 700,
       "fao_item": 15,
-      "season_t_min_c": 10
+      "season_t_min_c": 10,
+      "category": "grain"
     },
     {
       "id": "barley",
@@ -516,7 +590,8 @@
       },
       "revenue_usd_ha": 650,
       "fao_item": 44,
-      "season_t_min_c": 9
+      "season_t_min_c": 9,
+      "category": "grain"
     },
     {
       "id": "potato",
@@ -558,7 +633,16 @@
       },
       "revenue_usd_ha": 3500,
       "fao_item": 116,
-      "season_t_min_c": 10
+      "season_t_min_c": 10,
+      "category": "vegetable",
+      "t_opt_c": [
+        15,
+        21
+      ],
+      "yield_t_ha": [
+        20.0,
+        28.0
+      ]
     },
     {
       "id": "sunflower",
@@ -600,7 +684,16 @@
       },
       "revenue_usd_ha": 800,
       "fao_item": 267,
-      "season_t_min_c": 15
+      "season_t_min_c": 15,
+      "category": "technical",
+      "t_opt_c": [
+        20,
+        27
+      ],
+      "yield_t_ha": [
+        1.8,
+        2.6
+      ]
     },
     {
       "id": "rapeseed",
@@ -648,7 +741,8 @@
         90,
         60,
         35
-      ]
+      ],
+      "category": "technical"
     },
     {
       "id": "groundnut",
@@ -690,7 +784,8 @@
       },
       "revenue_usd_ha": 1400,
       "fao_item": 242,
-      "season_t_min_c": 20
+      "season_t_min_c": 20,
+      "category": "legume"
     },
     {
       "id": "dry_bean",
@@ -732,7 +827,8 @@
       },
       "revenue_usd_ha": 1100,
       "fao_item": 176,
-      "season_t_min_c": 16
+      "season_t_min_c": 16,
+      "category": "legume"
     },
     {
       "id": "lentil",
@@ -774,7 +870,8 @@
       },
       "revenue_usd_ha": 900,
       "fao_item": 201,
-      "season_t_min_c": 10
+      "season_t_min_c": 10,
+      "category": "legume"
     },
     {
       "id": "sugar_beet",
@@ -816,7 +913,8 @@
       },
       "revenue_usd_ha": 2200,
       "fao_item": 157,
-      "season_t_min_c": 10
+      "season_t_min_c": 10,
+      "category": "technical"
     },
     {
       "id": "millet",
@@ -858,7 +956,8 @@
       },
       "revenue_usd_ha": 500,
       "fao_item": 79,
-      "season_t_min_c": 20
+      "season_t_min_c": 20,
+      "category": "grain"
     },
     {
       "id": "tomato",
@@ -900,7 +999,16 @@
       },
       "revenue_usd_ha": 6000,
       "fao_item": 388,
-      "season_t_min_c": 17
+      "season_t_min_c": 17,
+      "category": "vegetable",
+      "t_opt_c": [
+        20,
+        27
+      ],
+      "yield_t_ha": [
+        35.0,
+        55.0
+      ]
     },
     {
       "id": "onion",
@@ -942,7 +1050,8 @@
       },
       "revenue_usd_ha": 4000,
       "fao_item": 403,
-      "season_t_min_c": 12
+      "season_t_min_c": 12,
+      "category": "vegetable"
     }
   ]
 }

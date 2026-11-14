@@ -114,7 +114,8 @@ def search_places(
     fitting the map, and for areas a simplified outline (GeoJSON) to draw.
     """
     try:
-        return {"results": geo.search(q, lang, limit)}
+        places = geo.search(q, lang, limit)
+        return {"results": places, **geo.as_geojson(places)}
     except geo.GeoDown as exc:
         raise HTTPException(502, "Place search is temporarily unavailable.") from exc
 
@@ -244,6 +245,8 @@ def analyze(
     w_income: float = Query(agro.DEFAULT_WEIGHTS["income"], ge=0, le=100),
     w_soil: float = Query(agro.DEFAULT_WEIGHTS["soil"], ge=0, le=100),
     w_risk: float = Query(agro.DEFAULT_WEIGHTS["risk"], ge=0, le=100),
+    period: str | None = Query(None, pattern=r"^\d{4}-\d{4}$",
+                               description="Years to replay the rotations over, e.g. 2016-2025 (default 2011-2025)"),
 ):
     """Full analysis of one field using every provider that works right now.
 
@@ -258,6 +261,7 @@ def analyze(
     msg = texts.WARN[lang]
     try:
         custom_years = agro.parse_custom(custom)
+        replay_period = agro.parse_period(period)
     except ValueError as exc:
         raise HTTPException(422, str(exc))
 
@@ -401,7 +405,7 @@ def analyze(
         crops = field.crops(plan["show"]) if plan["show"] else []
         rot = field.rotations(current, custom_years,
                               {"water": w_water, "income": w_income, "soil": w_soil, "risk": w_risk},
-                              plan["candidates"], plan["default_current"])
+                              plan["candidates"], plan["default_current"], replay_period)
         if not rot["items"]:
             rot = None
         for it in (rot or {}).get("items", []):
@@ -562,7 +566,20 @@ def observations(lat: float = Query(..., ge=-90, le=90), lon: float = Query(...,
     return {"products": products, "pending": pending, "complete": not pending}
 
 
+class SiteFiles(StaticFiles):
+    """Static site. Pages, scripts and styles are revalidated on every load (a cheap 304 when unchanged),
+    so a browser never runs an old app.js against a new index.html. Media keeps a normal cache."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if path.replace("\\", "/").startswith(("media/", "vendor/", "demo/", "fonts/")):
+            response.headers.setdefault("Cache-Control", "public, max-age=86400")
+        else:
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # Serve the website from the same server (one deploy, one link).
 _frontend = Path(__file__).parent.parent / "frontend"
 if _frontend.is_dir():
-    app.mount("/", StaticFiles(directory=_frontend, html=True), name="frontend")
+    app.mount("/", SiteFiles(directory=_frontend, html=True), name="frontend")

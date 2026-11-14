@@ -69,7 +69,7 @@ def search(q: str, lang: str = "en", limit: int = 5) -> list[dict]:
     try:
         rows = _nominatim("search", {
             "q": q, "limit": limit, "accept-language": "uz,en" if lang == "uz" else "en",
-            "polygon_geojson": 1, "polygon_threshold": 0.005,
+            "polygon_geojson": 1, "polygon_threshold": 0.005, "addressdetails": 1,
         })
         places = [_from_nominatim(r) for r in rows if isinstance(r, dict)]
     except GeoDown:
@@ -91,6 +91,8 @@ def _from_nominatim(r: dict) -> dict | None:
         "name": name, "context": context, "label": r.get("display_name") or name,
         "lat": lat, "lon": lon, "bbox": _bbox(r.get("boundingbox")),
         "kind": r.get("addresstype") or r.get("type"), "rank": r.get("place_rank"),
+        "address": {k: v for k, v in (r.get("address") or {}).items()
+                    if k in ("city", "town", "village", "county", "district", "state", "country", "country_code")},
         # points carry no outline worth drawing
         "outline": geometry if geometry and geometry.get("type") in ("Polygon", "MultiPolygon") else None,
     }
@@ -315,3 +317,19 @@ def elevation(lat: float, lon: float) -> float | None:
         except OSError:
             pass
     return value
+
+
+def as_geojson(places: list[dict]) -> dict:
+    """The same places as a Photon-style FeatureCollection (what the new frontend reads)."""
+    feats = []
+    for p in places:
+        a = p.get("address") or {}
+        b = p.get("bbox")
+        feats.append({"type": "Feature",
+                      "geometry": {"type": "Point", "coordinates": [p["lon"], p["lat"]]},
+                      "properties": {"name": p["name"], "city": a.get("city") or a.get("town") or a.get("village"),
+                                     "district": a.get("district"), "county": a.get("county"), "state": a.get("state"),
+                                     "country": a.get("country"), "countrycode": (a.get("country_code") or "").upper() or None,
+                                     "type": p.get("kind"),
+                                     "extent": [b[1], b[2], b[3], b[0]] if b else None}})
+    return {"type": "FeatureCollection", "features": feats}

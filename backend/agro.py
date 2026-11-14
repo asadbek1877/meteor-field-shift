@@ -108,6 +108,8 @@ def simulate(d: Days, crop: dict, harvest_year: int, awc: float) -> dict | None:
 
     need = rain = irrigation = t_sum = 0.0
     events = heat_days = 0
+    mid0, mid1 = crop["stages"][0] + crop["stages"][1], sum(crop["stages"][:3])   # mid-season: full canopy, flowering
+    mid_t, mid_rh = [], []
     frost = False
     heat, frost_rule = crop.get("heat"), crop.get("frost")
     percolation = crop.get("percolation_mm_day", 0.0)  # paddy rice loses water below the root zone
@@ -124,6 +126,10 @@ def simulate(d: Days, crop: dict, harvest_year: int, awc: float) -> dict | None:
             events += 1
             depletion = 0.0
         depletion = min(depletion, taw)
+        if mid0 <= day < mid1:
+            mid_t.append(d.t[i])
+            if d.rh and d.rh[i] is not None:
+                mid_rh.append(d.rh[i])
         if heat and heat["from_day"] <= day <= heat["to_day"] and d.tmax[i] >= heat["tmax_c"]:
             heat_days += 1
         if frost_rule and day < frost_rule["first_days"] and d.tmin[i] <= frost_rule["tmin_c"]:
@@ -135,7 +141,8 @@ def simulate(d: Days, crop: dict, harvest_year: int, awc: float) -> dict | None:
     if frost or cold:
         stress = 1.0
     return {"need": need, "rain": rain, "irrigation": irrigation, "events": events,
-            "heat_days": heat_days, "frost": frost, "cold": cold, "t_season": t_season, "stress": stress}
+            "heat_days": heat_days, "frost": frost, "cold": cold, "t_season": t_season, "stress": stress,
+            "mid_t": mean(mid_t) if mid_t else None, "mid_rh": mean(mid_rh) if mid_rh else None}
 
 
 def suitable_sowing_doy(d: Days, crop: dict, year: int) -> int | None:
@@ -233,6 +240,46 @@ def _last_spring_frost(d: Days, year: int, tmin_c: float) -> int | None:
     return last
 
 
+def _mean_of(rows: list, key: str, digits: int):
+    values = [r[key] for r in rows if r.get(key) is not None]
+    return rnd(mean(values), digits) if values else None
+
+
+SUIT_WEIGHTS = {"temperature": 0.40, "stress": 0.35, "water": 0.25}
+SUIT_TEMP_SLACK_C = 6.0      # the temperature part falls to zero this far outside the favourable range
+SUIT_WATER_FULL_MM = 1000.0  # net irrigation at which the water part reaches zero
+
+
+def suitability(crop: dict, period: dict | None) -> dict | None:
+    """Climate fit of one crop at this place, 0-100, from the simulated recent seasons.
+
+    temperature: mean air temperature of the mid-season stage against the crop's favourable range
+    stress:      heat days and early frost from the season simulation (1 - stress)
+    water:       net irrigation the crop needs here; less is better in a water-limited region
+    """
+    if not period:
+        return None
+    parts = {}
+    lo_hi, t = crop.get("t_opt_c"), period.get("mid_t_c")
+    if lo_hi and t is not None:
+        off = max(lo_hi[0] - t, t - lo_hi[1], 0.0)
+        parts["temperature"] = max(0.0, 1 - off / SUIT_TEMP_SLACK_C)
+    parts["stress"] = 1 - period["stress"]
+    parts["water"] = max(0.0, 1 - period["irrigation_mm"]["p50"] / SUIT_WATER_FULL_MM)
+    total = sum(SUIT_WEIGHTS[k] for k in parts)
+    score = sum(SUIT_WEIGHTS[k] * v for k, v in parts.items()) / total * 100
+    return {"score": rnd(score, 0), "parts": {k: rnd(v * 100, 0) for k, v in parts.items()}}
+
+
+def expected_yield(crop: dict, period: dict | None) -> dict | None:
+    """Typical irrigated yield range, reduced by the simulated heat/frost stress (as in the rotation income)."""
+    typical = crop.get("yield_t_ha")
+    if not typical or not period:
+        return None
+    keep = 1 - CONFIG["stress_yield_loss"] * period["stress"]
+    return {"low": rnd(typical[0] * keep, 1), "high": rnd(typical[1] * keep, 1), "typical": typical}
+
+
 class Field:
     """Simulation results for one point, soil and irrigation method. Crop-years are computed once.
 
@@ -292,6 +339,8 @@ class Field:
             "cold_years_share": rnd(mean(r["cold"] for r in rows), 2),
             "t_season_c": rnd(mean(r["t_season"] for r in rows), 1),
             "stress": rnd(mean(r["stress"] for r in rows), 2),
+            "mid_t_c": _mean_of(rows, "mid_t", 1),
+            "mid_rh_pct": _mean_of(rows, "mid_rh", 0),
         }
 
     def _sowing(self, crop: dict) -> dict | None:
@@ -334,6 +383,10 @@ class Field:
                 "water_level": water,
                 "stress_level": stress,
                 "level": max(water, stress, key=["low", "moderate", "high"].index),
+                "category": crop.get("category", "other"),
+                "t_opt_c": crop.get("t_opt_c"),
+                "suitability": suitability(crop, recent),
+                "yield_t_ha": expected_yield(crop, recent),
             })
         return out
 
@@ -359,7 +412,8 @@ class Field:
     # ----- rotations -----
 
     def rotations(self, current_id: str | None, custom: list | None, weights: dict | None,
-                  candidates: list[dict] | None = None, default_current: str | None = None) -> dict:
+                  candidates: list[dict] | None = None, default_current: str | None = None,
+                  period: tuple[int, int] | None = None) -> dict:
         weights = {k: max(0.0, float((weights or {}).get(k, v))) for k, v in DEFAULT_WEIGHTS.items()}
         if not sum(weights.values()):
             weights = dict(DEFAULT_WEIGHTS)
@@ -373,7 +427,8 @@ class Field:
             fallback = candidates[0]["id"]
         current_id = current_id if current_id in ids else fallback
 
-        years = [y for y in range(RECENT[0], RECENT[1] + 1)]
+        first, last = period or RECENT
+        years = [y for y in range(first, last + 1)]
         items = []
         for rot in candidates:
             per_year = self._replay(rot, years)
@@ -494,6 +549,19 @@ def _level(value, cuts) -> str:
 
 
 # ---------- rotation structure ----------
+
+REPLAY_FIRST_YEAR = 1991
+
+
+def parse_period(text: str | None) -> tuple[int, int] | None:
+    """'2016-2025' -> (2016, 2025). None keeps the default replay period (RECENT)."""
+    if not text:
+        return None
+    first, last = (int(x) for x in text.split("-"))
+    if not (REPLAY_FIRST_YEAR <= first and last <= RECENT[1] and last - first >= 4):
+        raise ValueError(f"Period must lie within {REPLAY_FIRST_YEAR}-{RECENT[1]} and span at least 5 years.")
+    return first, last
+
 
 def parse_custom(text: str | None) -> list | None:
     """'cotton|winter_wheat+mung_bean|alfalfa' -> [['cotton'], ['winter_wheat', 'mung_bean'], ['alfalfa']]"""

@@ -41,6 +41,7 @@ class Days:
     gaps: int                # days filled from the previous day
     grid_elevation: float = 0.0     # mean elevation of the NASA grid cell
     correction_c: tuple = (0.0, 0.0, 0.0)   # added to (mean, max, min) temperature for the point's elevation
+    rh: list | None = None   # relative humidity at 2 m in %, None where missing
 
     @property
     def daily(self) -> bool:
@@ -148,7 +149,7 @@ def prepare(data: dict, point_elevation: float | None = None) -> Days:
 
     days = Days(lat, data["lon"], elev, data.get("resolution", "daily"), start, n, t, tmax, tmin,
                 rain, et0, soil, year, doy, spans, pm_days / n if n else 0.0, gaps,
-                grid_elev, (d_mean, d_max, d_min))
+                grid_elev, (d_mean, d_max, d_min), list(rh[:n]))
     with _prepared_lock:  # requests run in parallel threads
         if len(_prepared) > 24:
             _prepared.pop(next(iter(_prepared)), None)

@@ -1,33 +1,58 @@
 <!doctype html>
-<html lang="uz">
+<html lang="uz" class="dash-page">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TerraShift</title><meta name="description" content="Data sources, methods, and provider settings for TerraShift.">
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hisobotlar | Dalaviy</title>
+  <meta name="description" content="Data sources, methods and provider settings behind every Dalaviy number.">
+  <script src="/transitions.js?v=20261116"></script>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin>
+  <link rel="stylesheet" href="/style.css?v=20261116">
+  <link rel="stylesheet" href="/field.css?v=20261116">
+  <link rel="stylesheet" href="/reports.css?v=20261116">
+  <link rel="stylesheet" href="/glass.css?v=20261116">
+  <link rel="stylesheet" href="/transitions.css?v=20261116">
+  <script type="speculationrules">{"prefetch": [{"where": {"selector_matches": ".dash-nav a"}, "eagerness": "moderate"}]}</script>
 </head>
-<body data-page="sources" data-title="page_title_sources">
+<body data-page="sources" data-title="page_title_sources" data-providers="nasa_power,soilgrids,open_meteo">
   <a class="skip-link" href="#main-content" data-t="skip_to_content"></a>
-  <header class="top">
-    <a class="brand" href="/" aria-label="TerraShift"><span class="logo" aria-hidden="true"></span><span><strong>TerraShift</strong><span class="sub" data-t="tagline"></span></span></a>
-    <nav class="site-nav" data-t-aria="main_nav_label">
-      <a href="/" data-page-link="home" data-t="nav_home"></a><a href="/rotations.html" data-page-link="rotations" data-t="nav_rotations"></a>
-      <a href="/climate.html" data-page-link="climate" data-t="nav_climate"></a><a href="/crops.html" data-page-link="crops" data-t="nav_crops"></a>
-      <a href="/current.html" data-page-link="current" data-t="nav_now"></a><a href="/sources.html" data-page-link="sources" data-t="nav_sources"></a>
-    </nav>
-    <div class="top-actions"><div id="chips" class="chips" aria-live="polite"></div>
-      <div class="seg" role="group" data-t-aria="language_group"><button type="button" data-lang="uz">UZ</button><button type="button" data-lang="en">EN</button></div>
-      <a class="btn ghost source-link" href="/sources.html" data-t="sources_btn"></a>
-    </div>
-  </header>
-  <div id="warnings" class="warnings" aria-live="polite"></div>
+
+  <!-- Reports (Hisobotlar): data sources, methods, image credits and provider settings, inside the shared Dalaviy shell.
+       Shared header and icons: shell.js. Data: app.js (renderSources, providers). Behaviour: field.js. Styles: field.css + reports.css. -->
+  <div id="app" class="app-shell dash rep" data-in-root>
+    <div data-shell-sprite></div>
+    <div class="dash-bg" aria-hidden="true"><div class="dash-atmos rep-atmos"></div><div class="dash-vignette"></div></div>
+    <header data-shell-header></header>
+    <script src="/shell.js?v=20261116"></script>
   <p id="analysis-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-  <main class="page-main" id="main-content">
-    <section class="card" id="sources-card" aria-labelledby="sources-heading">
+  <main class="rep-main" id="main-content">
+    <div class="rep-intro" data-in style="--i: 1">
+      <p class="dash-eyebrow"><span class="dash-slashes" aria-hidden="true">///</span><span>Data &amp; methods</span></p>
+    </div>
+    <section class="card dash-panel" data-in style="--i: 2" id="sources-card" aria-labelledby="sources-heading">
       <h1 id="sources-heading" data-t="sources_title"></h1>
       <div id="datasets"></div><h2 data-t="method_title"></h2>
       <ul id="methods" class="plain"></ul><p id="disclaimer" class="hint"></p>
     </section>
-    <section class="card" id="provider-settings" aria-labelledby="provider-heading">
+    <section class="card dash-panel" data-reveal id="crop-images" aria-labelledby="crop-images-heading">
+      <h2 id="crop-images-heading" data-t="crop_images_credit"></h2>
+      <p class="hint">Wikimedia Commons. Cropped, background removed or darkened and converted to WebP for the Ekinlar page; each file keeps its original licence (see the file page for the author).</p>
+      <ul class="plain">
+        <li><b>cotton</b>: <a href="https://commons.wikimedia.org/wiki/File:COTTON_open_boll_(48947824348).jpg" rel="noopener" target="_blank">COTTON open boll (48947824348).jpg</a> · CC0 · Alabama Extension</li>
+        <li><b>winter_wheat</b>: <a href="https://commons.wikimedia.org/wiki/File:Triticum_aestivum_subsp._aestivum_MHNT.BOT.2015.2.31.jpg" rel="noopener" target="_blank">Triticum aestivum subsp. aestivum MHNT.BOT.2015.2.31.jpg</a> · CC BY-SA 3.0</li>
+        <li><b>maize</b>: <a href="https://commons.wikimedia.org/wiki/File:Zea_mays_%27Lacaune%27_MHNT.BOT.2015.34.5.jpg" rel="noopener" target="_blank">Zea mays &#x27;Lacaune&#x27; MHNT.BOT.2015.34.5.jpg</a> · CC BY-SA 3.0</li>
+        <li><b>sorghum</b>: <a href="https://commons.wikimedia.org/wiki/File:Sorghum_bicolor_Moderne_MHNT.BOT.2015.34.152.jpg" rel="noopener" target="_blank">Sorghum bicolor Moderne MHNT.BOT.2015.34.152.jpg</a> · CC BY-SA 4.0</li>
+        <li><b>soybean</b>: <a href="https://commons.wikimedia.org/wiki/File:CSIRO_ScienceImage_3272_Soybeans.jpg" rel="noopener" target="_blank">CSIRO ScienceImage 3272 Soybeans.jpg</a> · CC BY 3.0 · Amy Wilson, CSIRO</li>
+        <li><b>sunflower</b>: <a href="https://commons.wikimedia.org/wiki/File:Sunflower_head_2015_G2.jpg" rel="noopener" target="_blank">Sunflower head 2015 G2.jpg</a> · Public domain</li>
+        <li><b>mung_bean</b>: <a href="https://commons.wikimedia.org/wiki/File:Mung_beans_(Vigna_radiata).jpg" rel="noopener" target="_blank">Mung beans (Vigna radiata).jpg</a> · CC BY-SA 4.0</li>
+        <li><b>chickpea</b>: <a href="https://commons.wikimedia.org/wiki/File:Ordinary_chickpeas_in_a_ceramic_bowl.jpg" rel="noopener" target="_blank">Ordinary chickpeas in a ceramic bowl.jpg</a> · CC BY-SA 4.0</li>
+        <li><b>alfalfa</b>: <a href="https://commons.wikimedia.org/wiki/File:Medicago_sativa_15-p.bot-medi.sati-013.jpg" rel="noopener" target="_blank">Medicago sativa 15-p.bot-medi.sati-013.jpg</a> · CC BY-SA 4.0</li>
+        <li><b>tomato</b>: <a href="https://commons.wikimedia.org/wiki/File:Bright_red_tomato_and_cross_section02.jpg" rel="noopener" target="_blank">Bright red tomato and cross section02.jpg</a> · GFDL 1.2 · fir0002  flagstaffotos [at] gmail.com</li>
+        <li><b>potato</b>: <a href="https://commons.wikimedia.org/wiki/File:Russet_potato_cultivar_with_sprouts.jpg" rel="noopener" target="_blank">Russet potato cultivar with sprouts.jpg</a> · Public domain</li>
+      </ul>
+    </section>
+    <section class="card dash-panel" data-reveal id="provider-settings" aria-labelledby="provider-heading">
       <h2 id="provider-heading" data-t="settings_title"></h2><p class="hint" data-t="settings_hint"></p>
       <div id="providers" aria-live="polite"></div>
       <button type="button" id="refresh-providers" class="btn ghost" data-t="recheck"></button>
@@ -43,6 +68,9 @@
       <p id="provider-msg" class="hint" aria-live="polite"></p>
     </section>
   </main>
-  <script src="/i18n.js"></script><script src="/app.js"></script>
+  </div>
+  <script src="/i18n.js?v=20261116"></script>
+  <script src="/app.js?v=20261116"></script>
+  <script src="/field.js?v=20261116"></script>
 </body>
 </html>
